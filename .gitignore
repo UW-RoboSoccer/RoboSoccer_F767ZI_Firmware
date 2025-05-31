@@ -1,52 +1,44 @@
-# Prerequisites
-*.d
+###############################################################################
+#  STM32CubeIDE / Eclipse-CDT                                                #
+###############################################################################
 
-# Object files
+# ─── BUILD OUTPUT ────────────────────────────────────────────────────────────
+# Per-configuration build directories (CubeIDE creates “Debug/” and “Release/”)
+Debug/
+Release/
+# Any other local build dirs you may create
+build*/
+
+# Object files, dependency files, map/listing files …
 *.o
-*.ko
-*.obj
+*.d
 *.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
+*.axf
 *.out
-*.app
-*.i*86
-*.x86_64
+*.bin
 *.hex
+*.map
+*.lst
+*.log
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# ─── IDE–GENERATED / USER-LOCAL SETTINGS ─────────────────────────────────────
+# Eclipse index & per-user metadata
+.metadata/
+# Launch configurations created with “Debug As…”
+*.launch
+# Optional: comment-in to ignore IDE settings; 
+# keep them if you want colleagues to build without re-configuring.
+# .settings/
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# ─── CODE GENERATOR / TEMPORARIES ────────────────────────────────────────────
+# CubeMX backup files
+*.ioc-backup
+# Temporary or backup files from editors
+*~
+*.swp
+*.tmp
+*.bak
+
+# ─── OS CRUFT ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
