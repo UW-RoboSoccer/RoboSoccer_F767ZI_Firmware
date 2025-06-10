@@ -10,7 +10,7 @@
   *
   * @Note       1. The BNO08X supports 4 wire mode and implements SPI mode 3:
   *                CPOL = 1 (High) and CPHA = 1 (2 Edge); [2]
-  *             2. Interrupt service routine in "spi.h", "gpio.h", "tim.h"
+  *             2. Interrupt service routine in "spi.h", "gpio.h"
   *             3. Finite state machine spi_state_s [3] section 3.4.1
   *             4. PIN P0/PS0 should be connected to +3.3V via jumper
   *
@@ -35,8 +35,7 @@
 
 
 /* Private variables ---------------------------------------------------------*/
-extern SPI_HandleTypeDef hspi2;
-extern osSemaphoreId_t imuSpiReadSemHandle;
+extern SPI_HandleTypeDef hspi3;
 extern UART_HandleTypeDef huart2;
 static sh2_Hal_t imu_hal;
 
@@ -94,12 +93,12 @@ static void imu_hal_init_hardware(void)
 static void imu_hal_enable_interrupt(void)
 {
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-  HAL_NVIC_EnableIRQ(SPI2_IRQn);
+  HAL_NVIC_EnableIRQ(SPI3_IRQn);
 }
 
 static void imu_hal_disable_interrupt(void)
 {
-  HAL_NVIC_DisableIRQ(SPI2_IRQn);
+  HAL_NVIC_DisableIRQ(SPI3_IRQn);
   HAL_NVIC_DisableIRQ(EXTI0_IRQn);
 }
 
@@ -149,7 +148,7 @@ static void spi_dummy_TransmitReceive(void)
   uint8_t dummyRx[1];
 
   memset(dummyTx, 0xAA, sizeof(dummyTx));
-  HAL_SPI_TransmitReceive(&hspi2, dummyTx, dummyRx, sizeof(dummyTx), 2);
+  HAL_SPI_TransmitReceive(&hspi3, dummyTx, dummyRx, sizeof(dummyTx), 2);
 }
 
 
@@ -160,7 +159,7 @@ static void spi_dummy_TransmitReceive(void)
   */
 static spi_status_t imu_start_Receive(uint8_t *rx_buffer, uint16_t len)
 {
-  HAL_StatusTypeDef retval = HAL_SPI_TransmitReceive_IT(&hspi2,
+  HAL_StatusTypeDef retval = HAL_SPI_TransmitReceive_IT(&hspi3,
                                                         (uint8_t*)imu_spi.Dummy_TxBuffer,
                                                         rx_buffer,
                                                         len);
@@ -182,7 +181,7 @@ static spi_status_t imu_start_Receive(uint8_t *rx_buffer, uint16_t len)
   */
 static spi_status_t imu_start_Transmit(uint8_t *tx_buffer, uint16_t len)
 {
-  HAL_StatusTypeDef retval = HAL_SPI_TransmitReceive_IT(&hspi2,
+  HAL_StatusTypeDef retval = HAL_SPI_TransmitReceive_IT(&hspi3,
                                                         tx_buffer,
                                                         (uint8_t*)imu_spi.RxBuffer,
                                                         len);
@@ -206,6 +205,12 @@ static uint16_t imu_get_payload_length(void)
   uint8_t shtp_len_lsb = imu_spi.RxBuffer[0];
   uint8_t shtp_len_msb = imu_spi.RxBuffer[1];
   uint16_t shtp_len_full = ((shtp_len_msb << 8U) | shtp_len_lsb);
+
+  /*
+   *  Check for a failed IMU peripheral
+   *  "A length of 65535 (0xFFFF) is reserved because a failed peripheral
+   *  can too easily produce 0xFFFF".[3] section 2.2.1
+   */
   if (shtp_len_full == 0xFFFFU) {
     imu_error_flags |= IMU_PERIPHERAL_FAILURE;
     return 0;
@@ -438,7 +443,7 @@ static void imu_hal_close(sh2_Hal_t *self)
   IMU_CS_SET_HIGH();
 
   // Deinit peripherals
-  HAL_SPI_DeInit(&hspi2);
+  HAL_SPI_DeInit(&hspi3);
   __HAL_TIM_DISABLE(&htim2);
 
   // close sh2

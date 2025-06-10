@@ -219,9 +219,9 @@ void StartGeneralTask0(void *argument)
   for(;;)
   {
     if (filtered_adc1_buffer[0] > 3000) {
-      LD1_GPIO_Port->BSRR = (uint32_t)LD1_Pin;
+      LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin;
     } else {
-      LD1_GPIO_Port->BSRR = (uint32_t)LD1_Pin << 16;
+      LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin << 16;
     }
     // printf("adc1[0] Reading: %d \r\n", filtered_adc1_buffer[0]);
     vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(100));

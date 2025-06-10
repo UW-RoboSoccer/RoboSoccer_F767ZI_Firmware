@@ -14,7 +14,7 @@
 
 #define   ADC1_CHANNEL_COUNT      1U
 #define   ADC1_FILTER_SIZE        5U
-#define   FSR_ADC_TIMEOUT         1U      // millisecond
+#define   FSR_ADC_TIMEOUT         2U      // millisecond
 
 /*--------- adc1_error_flags ----------*/
 #define   ADC1_START_ERROR         0x1;
