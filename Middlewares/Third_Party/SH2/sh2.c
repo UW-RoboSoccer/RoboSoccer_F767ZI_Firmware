@@ -999,6 +999,7 @@ static int setSensorConfigStart(sh2_t *pSh2)
 
 const sh2_Op_t setSensorConfigOp = {
     .start = setSensorConfigStart,
+    .timeout_us = 1000000,
 };
 
 // ------------------------------------------------------------------------

@@ -81,6 +81,10 @@ void Error_Handler(void);
 #define USB_PowerSwitchOn_GPIO_Port GPIOG
 #define USB_OverCurrent_Pin GPIO_PIN_7
 #define USB_OverCurrent_GPIO_Port GPIOG
+#define MOTOR_TX_Pin GPIO_PIN_9
+#define MOTOR_TX_GPIO_Port GPIOA
+#define MOTOR_RX_Pin GPIO_PIN_10
+#define MOTOR_RX_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14

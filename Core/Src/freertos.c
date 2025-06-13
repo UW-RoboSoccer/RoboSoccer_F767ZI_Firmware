@@ -29,6 +29,7 @@
 #include "imu_driver.h"
 #include "analog_driver.h"
 #include "error.h"
+#include "iwdg.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -93,6 +94,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 /* Hook prototypes */
 void configureTimerForRunTimeStats(void);
 unsigned long getRunTimeCounterValue(void);
+void vApplicationIdleHook(void);
 void vApplicationTickHook(void);
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
 
@@ -109,6 +111,24 @@ return 0;
 }
 /* USER CODE END 1 */
 
+/* USER CODE BEGIN 2 */
+void vApplicationIdleHook( void )
+{
+   /* vApplicationIdleHook() will be called on each iteration of the idle
+   task. It is essential that code added to this hook function never attempts
+   to block in any way (for example, call xQueueReceive() with a block time
+   specified, or call vTaskDelay()). If the application makes use of the
+   vTaskDelete() API function (as this demo application does) then it is also
+   important that vApplicationIdleHook() is permitted to return to its calling
+   function, because it is the responsibility of the idle task to clean up
+   memory allocated by the kernel to any task that has since been deleted. */
+
+  // Refresh watch dog timer
+  // If any task hangs for more than 1 second, trigger a software reset
+  HAL_IWDG_Refresh(&hiwdg);
+}
+/* USER CODE END 2 */
+
 /* USER CODE BEGIN 3 */
 void vApplicationTickHook( void )
 {
@@ -117,6 +137,7 @@ void vApplicationTickHook( void )
    added here, but the tick hook is called from an interrupt context, so
    code must not attempt to block, and only the interrupt safe FreeRTOS API
    functions can be used (those that end in FromISR()). */
+
 }
 /* USER CODE END 3 */
 

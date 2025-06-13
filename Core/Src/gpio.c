@@ -61,7 +61,10 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOE_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOF, GPO_IMU_RST_Pin|GPO_IMU_CS_Pin|GPO_IMU_PS0_WAKE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOF, GPO_IMU_RST_Pin|GPO_IMU_CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPO_IMU_PS0_WAKE_GPIO_Port, GPO_IMU_PS0_WAKE_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LD3_Pin|LD2_Pin, GPIO_PIN_RESET);

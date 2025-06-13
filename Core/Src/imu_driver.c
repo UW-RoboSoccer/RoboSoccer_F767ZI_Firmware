@@ -285,7 +285,7 @@ void imu_spi_activate(void)
         imu_error_flags |= IMU_READ_HEADER_FAILURE;
         IMU_CS_SET_HIGH();
       } else if (rx_retval == SPI_BUSY) {
-         //Retry when next INT pin is serviced
+        //Retry when next INT pin is serviced
         IMU_CS_SET_HIGH();
       }
     }
@@ -504,6 +504,7 @@ static int imu_hal_write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len)
 
   // If tx is occupied, return 0 to try again later
   if (imu_spi.TxBuffer_Len != 0) {
+    IMU_WAKE_PS0_SET_HIGH();
     return 0;
   }
 
@@ -645,7 +646,7 @@ static void imu_report_sensorIds(void)
 
   // Report the results
   for (int n = 0; n < prodIds.numEntries; n++) {
-    printf("Part %ld : Version %d.%d.%d Build %ld Reset Cause %d \n\r",
+    printf("IMU Part %ld : Version %d.%d.%d Build %ld Reset Cause %d \n\r",
            prodIds.entry[n].swPartNumber,
            prodIds.entry[n].swVersionMajor, prodIds.entry[n].swVersionMinor,
            prodIds.entry[n].swVersionPatch, prodIds.entry[n].swBuildNumber,
@@ -692,11 +693,11 @@ static imu_status_t imu_start_reports(void)
       if (sensorConfig[n].config.reportInterval_us != 0) {
         printf("Error while enabling sensor %d\n\r", sensorId);
         imu_error_flags |= IMU_SENSOR_ENABLE_FAILURE;
-        //return IMU_ERROR;
+        return IMU_ERROR;
       } else {
         printf("Error while disabling sensor %d\n\r", sensorId);
         imu_error_flags |= IMU_SENSOR_DISABLE_FAILURE;
-        //return IMU_ERROR;
+        return IMU_ERROR;
       }
     }
   }
@@ -717,13 +718,11 @@ imu_status_t imu_sys_init(void)
     return IMU_ERROR;
   }
 
-  // Register sensor data events
-  if (sh2_setSensorCallback(imu_dataHandler, NULL) != SH2_OK) {
-    imu_error_flags |= IMU_INIT_SENSOR_EVENT_ERROR;
-    return IMU_ERROR;
-  }
 
+  // Register sensor data events
+  sh2_setSensorCallback(imu_dataHandler, NULL);
   imu_status_t retval = imu_start_reports();
+
   // Get product ids
   imu_report_sensorIds();
 

@@ -17,18 +17,24 @@ extern volatile uint32_t imu_error_flags;
 void RoboSoccer_errorHandler(void)
 {
   // Return early if no error flags are set
-  if ( (imu_error_flags | adc1_error_flags | hardware_fault_flags) == 0) {
-    return;
-  }
+//  if ( (imu_error_flags | adc1_error_flags | hardware_fault_flags) == 0) {
+//    return;
+//  }
 
   for (;;) {
-    //__disable_irq();
+    printf("====== System Error  ======\r\n");
+    printf("Hardware Fault Flags   : 0x%04X\r\n", hardware_fault_flags);
+    printf("Bus Error Address      : 0x%08lX\r\n", bus_error_addr);
+    printf("Mem Access Error Addr  : 0x%08lX\r\n", mem_access_error_addr);
+    printf("ADC1 Error Flags       : 0x%02X\r\n", adc1_error_flags);
+    printf("IMU Error Flags        : 0x%08lX\r\n", imu_error_flags);
+    printf("===========================\r\n");
+    __disable_irq();
     HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
     HAL_Delay(500);
     //__enable_irq();
   }
-
 
 }
 
