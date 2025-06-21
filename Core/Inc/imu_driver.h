@@ -79,15 +79,15 @@ typedef enum {
 
 typedef struct {
   __attribute__((aligned(32)))
-  uint8_t RxBuffer[SH2_HAL_MAX_TRANSFER_IN];
-  uint32_t RxBuffer_Len;
+  uint8_t     RxBuffer[SH2_HAL_MAX_TRANSFER_IN];
+  uint32_t    RxBuffer_Len;
   __attribute__((aligned(32)))
-  uint8_t Dummy_TxBuffer[SH2_HAL_MAX_TRANSFER_OUT];
+  uint8_t     Dummy_TxBuffer[SH2_HAL_MAX_TRANSFER_OUT];
   __attribute__((aligned(32)))
-  uint8_t TxBuffer[SH2_HAL_MAX_TRANSFER_OUT];
-  uint32_t TxBuffer_Len;
+  uint8_t     TxBuffer[SH2_HAL_MAX_TRANSFER_OUT];
+  uint32_t    TxBuffer_Len;
   spi_state_t state;
-  uint32_t rx_timestamp;
+  uint32_t    rx_timestamp;
 } sh2_spi_s;
 
 /* Public function prototypes -----------------------------------------------*/

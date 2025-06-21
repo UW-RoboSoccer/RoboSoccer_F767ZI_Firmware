@@ -11,7 +11,7 @@
   * @Note       1. The BNO08X supports 4 wire mode and implements SPI mode 3:
   *                CPOL = 1 (High) and CPHA = 1 (2 Edge); [2]
   *             2. Interrupt service routine in "spi.h", "gpio.h"
-  *             3. Finite state machine spi_state_s [3] section 3.4.1
+  *             3. Finite state machine spi_state_t [3] section 3.4.1
   *             4. PIN P0/PS0 should be connected to +3.3V via jumper
   *
   ******************************************************************************
@@ -76,7 +76,7 @@ static void delay(uint32_t us_delay);
 static spi_status_t imu_start_Receive(uint8_t *rx_buffer, uint16_t len);
 static spi_status_t imu_start_Transmit(uint8_t *tx_buffer, uint16_t len);
 static sh2_Hal_t *imu_get_hal(void);
-static void imu_dataHandler(void * cookie, sh2_SensorEvent_t *pEvent);
+static void imu_dataHandler(void *cookie, sh2_SensorEvent_t *pEvent);
 static void sh2_eventHanlder(void *cookie, sh2_AsyncEvent_t *pEvt);
 static void imu_report_sensorIds(void);
 static imu_status_t imu_start_reports(void);
@@ -262,9 +262,9 @@ void imu_spi_activate(void)
     // Transmit if TxBuffer exist
     if (imu_spi.TxBuffer_Len > 0) {
       imu_spi.state = SPI_WRITE;
-      SCB_CleanDCache_by_Addr((uint32_t*)imu_spi.TxBuffer, imu_spi.TxBuffer_Len);  // write-through
       spi_status_t tx_retval = imu_start_Transmit((uint8_t*)imu_spi.TxBuffer, imu_spi.TxBuffer_Len);
       IMU_WAKE_PS0_SET_HIGH();
+
       if (tx_retval == SPI_ERROR) {
         imu_error_flags |= IMU_TRANSMIT_ERROR;
         imu_spi.state = SPI_IDLE;
