@@ -59,16 +59,20 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
-#define GPO_IMU_RST_Pin GPIO_PIN_0
-#define GPO_IMU_RST_GPIO_Port GPIOF
-#define GPO_IMU_CS_Pin GPIO_PIN_1
-#define GPO_IMU_CS_GPIO_Port GPIOF
-#define GPO_IMU_PS0_WAKE_Pin GPIO_PIN_2
-#define GPO_IMU_PS0_WAKE_GPIO_Port GPIOF
+#define SPI_IMU_RST_Pin GPIO_PIN_0
+#define SPI_IMU_RST_GPIO_Port GPIOF
+#define SPI_IMU_CS_Pin GPIO_PIN_1
+#define SPI_IMU_CS_GPIO_Port GPIOF
+#define SPI_IMU_PS0_WAKE_Pin GPIO_PIN_2
+#define SPI_IMU_PS0_WAKE_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
+#define USB_OTG_HS_ULPI_RST_Pin GPIO_PIN_1
+#define USB_OTG_HS_ULPI_RST_GPIO_Port GPIOC
 #define ADC_FSR1_Pin GPIO_PIN_0
 #define ADC_FSR1_GPIO_Port GPIOA
+#define ADC_FSR2_Pin GPIO_PIN_1
+#define ADC_FSR2_GPIO_Port GPIOA
 #define SPI_IMU_MOSI_Pin GPIO_PIN_2
 #define SPI_IMU_MOSI_GPIO_Port GPIOB
 #define LD3_Pin GPIO_PIN_14
@@ -81,6 +85,10 @@ void Error_Handler(void);
 #define USB_PowerSwitchOn_GPIO_Port GPIOG
 #define USB_OverCurrent_Pin GPIO_PIN_7
 #define USB_OverCurrent_GPIO_Port GPIOG
+#define WIFI_RX_Pin GPIO_PIN_6
+#define WIFI_RX_GPIO_Port GPIOC
+#define WIFI_TX_Pin GPIO_PIN_7
+#define WIFI_TX_GPIO_Port GPIOC
 #define MOTOR_TX_Pin GPIO_PIN_9
 #define MOTOR_TX_GPIO_Port GPIOA
 #define MOTOR_RX_Pin GPIO_PIN_10
@@ -95,9 +103,9 @@ void Error_Handler(void);
 #define SPI_IMU_MISO_GPIO_Port GPIOC
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
-#define GPI_IMU_INT_Pin GPIO_PIN_0
-#define GPI_IMU_INT_GPIO_Port GPIOE
-#define GPI_IMU_INT_EXTI_IRQn EXTI0_IRQn
+#define SPI_IMU_INT_Pin GPIO_PIN_0
+#define SPI_IMU_INT_GPIO_Port GPIOE
+#define SPI_IMU_INT_EXTI_IRQn EXTI0_IRQn
 
 /* USER CODE BEGIN Private defines */
 #define PRINTF_TX_BUFFER_SIZE       512

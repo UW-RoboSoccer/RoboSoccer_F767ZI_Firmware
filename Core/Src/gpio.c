@@ -61,10 +61,13 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOE_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOF, GPO_IMU_RST_Pin|GPO_IMU_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOF, SPI_IMU_RST_Pin|SPI_IMU_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPO_IMU_PS0_WAKE_GPIO_Port, GPO_IMU_PS0_WAKE_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(SPI_IMU_PS0_WAKE_GPIO_Port, SPI_IMU_PS0_WAKE_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(USB_OTG_HS_ULPI_RST_GPIO_Port, USB_OTG_HS_ULPI_RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
@@ -79,18 +82,25 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PFPin PFPin */
-  GPIO_InitStruct.Pin = GPO_IMU_RST_Pin|GPO_IMU_PS0_WAKE_Pin;
+  GPIO_InitStruct.Pin = SPI_IMU_RST_Pin|SPI_IMU_PS0_WAKE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = GPO_IMU_CS_Pin;
+  GPIO_InitStruct.Pin = SPI_IMU_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPO_IMU_CS_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(SPI_IMU_CS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PtPin */
+  GPIO_InitStruct.Pin = USB_OTG_HS_ULPI_RST_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(USB_OTG_HS_ULPI_RST_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PBPin PBPin */
   GPIO_InitStruct.Pin = LD3_Pin|LD2_Pin;
@@ -113,10 +123,10 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = GPI_IMU_INT_Pin;
+  GPIO_InitStruct.Pin = SPI_IMU_INT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPI_IMU_INT_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(SPI_IMU_INT_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 4, 0);
@@ -134,27 +144,31 @@ void imu_hal_init_gpio(void)
   __HAL_RCC_GPIOF_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOF, GPO_IMU_RST_Pin|GPO_IMU_CS_Pin|GPO_IMU_PS0_WAKE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOF, SPI_IMU_RST_Pin|SPI_IMU_CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(SPI_IMU_PS0_WAKE_GPIO_Port, SPI_IMU_PS0_WAKE_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : PFPin PFPin */
-  GPIO_InitStruct.Pin = GPO_IMU_RST_Pin|GPO_IMU_PS0_WAKE_Pin;
+  GPIO_InitStruct.Pin = SPI_IMU_RST_Pin|SPI_IMU_PS0_WAKE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = GPO_IMU_CS_Pin;
+  GPIO_InitStruct.Pin = SPI_IMU_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPO_IMU_CS_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(SPI_IMU_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = GPI_IMU_INT_Pin;
+  GPIO_InitStruct.Pin = SPI_IMU_INT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPI_IMU_INT_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(SPI_IMU_INT_GPIO_Port, &GPIO_InitStruct);
+
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 4, 0);
@@ -163,7 +177,7 @@ void imu_hal_init_gpio(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  if (GPIO_Pin == GPI_IMU_INT_Pin) {
+  if (GPIO_Pin == SPI_IMU_INT_Pin) {
     imu_spi.rx_timestamp = MICRO_SECOND_STAMP();
     imu_hal_flags |= IMU_INT_SERVICED;
     imu_hal_flags &= ~IMU_IN_RESET;

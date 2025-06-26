@@ -12,7 +12,7 @@
 #include "cmsis_os.h"
 
 
-#define   ADC1_CHANNEL_COUNT      1U
+#define   ADC1_CHANNEL_COUNT      2U
 #define   ADC1_FILTER_SIZE        5U
 #define   FSR_ADC_TIMEOUT         2U      // millisecond
 

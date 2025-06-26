@@ -48,12 +48,12 @@
 #define   IMU_RESET_OCCURRED              0x08U
 /*----------------------------------------------*/
 
-#define   IMU_CS_SET_LOW()                GPO_IMU_CS_GPIO_Port->BSRR = (uint32_t)GPO_IMU_CS_Pin << 16U
-#define   IMU_CS_SET_HIGH()               GPO_IMU_CS_GPIO_Port->BSRR = (uint32_t)GPO_IMU_CS_Pin
-#define   IMU_RST_SET_LOW()               GPO_IMU_RST_GPIO_Port->BSRR = (uint32_t)GPO_IMU_RST_Pin << 16U
-#define   IMU_RST_SET_HIGH()              GPO_IMU_RST_GPIO_Port->BSRR = (uint32_t)GPO_IMU_RST_Pin
-#define   IMU_WAKE_PS0_SET_LOW()          GPO_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)GPO_IMU_PS0_WAKE_Pin << 16U
-#define   IMU_WAKE_PS0_SET_HIGH()         GPO_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)GPO_IMU_PS0_WAKE_Pin
+#define   IMU_CS_SET_LOW()                SPI_IMU_CS_GPIO_Port->BSRR = (uint32_t)SPI_IMU_CS_Pin << 16U
+#define   IMU_CS_SET_HIGH()               SPI_IMU_CS_GPIO_Port->BSRR = (uint32_t)SPI_IMU_CS_Pin
+#define   IMU_RST_SET_LOW()               SPI_IMU_RST_GPIO_Port->BSRR = (uint32_t)SPI_IMU_RST_Pin << 16U
+#define   IMU_RST_SET_HIGH()              SPI_IMU_RST_GPIO_Port->BSRR = (uint32_t)SPI_IMU_RST_Pin
+#define   IMU_WAKE_PS0_SET_LOW()          SPI_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)SPI_IMU_PS0_WAKE_Pin << 16U
+#define   IMU_WAKE_PS0_SET_HIGH()         SPI_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)SPI_IMU_PS0_WAKE_Pin
 #define   ARRAY_LEN(a)                    ((sizeof(a))/(sizeof(a[0])))
 
 /* Public typedef  ----------------------------------------------------------*/

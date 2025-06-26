@@ -342,10 +342,10 @@ bool STServo_Ping(STServo_Handle_t *handle, uint8_t id)
     return false;
   }
 
-  uint8_t packet[ST_SERVO_BUFFER_SIZE];
+  STServo_Packet_t packet[ST_SERVO_BUFFER_SIZE];
   uint8_t packet_length = STServo_BuildPacket(packet, id, ST_INST_PING, NULL, 0);
 
-  if (!STServo_SendPacket(handle, packet, packet_length)) {
+  if (!STServo_SendPacket(handle, (uint8_t*)&packet, packet_length)) {
     return false;
   }
 
@@ -547,7 +547,7 @@ static bool STServo_WriteData(STServo_Handle_t *handle, uint8_t id, uint8_t addr
   params[0] = address;
   memcpy(&params[1], data, length);
 
-  uint8_t packet[ST_SERVO_BUFFER_SIZE];
+  STServo_Packet_t packet[ST_SERVO_BUFFER_SIZE];
   uint8_t packet_length = STServo_BuildPacket(packet, id, ST_INST_WRITE, params, length + 1);
 
   return STServo_SendPacket(handle, (uint8_t*)&packet, packet_length);
@@ -573,7 +573,7 @@ static bool STServo_ReadData(STServo_Handle_t *handle, uint8_t id, uint8_t addre
   params[0] = address;
   params[1] = length;
 
-  uint8_t packet[ST_SERVO_BUFFER_SIZE];
+  STServo_Packet_t packet[ST_SERVO_BUFFER_SIZE];
   uint8_t packet_length = STServo_BuildPacket(packet, id, ST_INST_READ, params, 2);
 
   if (!STServo_SendPacket(handle, (uint8_t*)&packet, packet_length)) {
@@ -598,7 +598,7 @@ static bool STServo_ReadData(STServo_Handle_t *handle, uint8_t id, uint8_t addre
 
 
 /**
- * @brief Handle state machine read data from ISR
+ * @brief Handle read data from ISR
  * @param handle Servo handle
  */
 void STServo_ReadFromISR(STServo_Handle_t *handle)

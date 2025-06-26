@@ -56,52 +56,52 @@ bool STServo_ValidateChecksum(const uint8_t *packet, uint8_t length)
  * @param param_length Parameter length
  * @return Total packet length
  */
-//uint8_t STServo_BuildPacket(STServo_Packet_t *packet, uint8_t id, uint8_t instruction,
-//                           const uint8_t *parameters, uint8_t param_length)
-//{
-//  if (!packet) {
-//    return 0;
-//  }
-//
-//  // Build packet
-//  packet->header[0] = ST_SERVO_FRAME_HEADER;
-//  packet->header[1] = ST_SERVO_FRAME_HEADER2;
-//  packet->id = id;
-//  packet->length = param_length + 2;  // instruction + checksum
-//  packet->instruction = instruction;
-//
-//  // Copy parameters if provided
-//  if (parameters && param_length > 0) {
-//    memcpy(packet->parameters, parameters, param_length);
-//  }
-//
-//  // Calculate and set checksum
-//  uint8_t total_length = 4 + param_length + 1;  // header + id + length + instruction + params
-//  packet->checksum = STServo_CalculateChecksum((uint8_t*)packet, total_length);
-//
-//  return total_length + 1;  // Include checksum in total length
-//}
-uint8_t STServo_BuildPacket(uint8_t *packet, uint8_t id, uint8_t instruction, const uint8_t *parameters, uint8_t param_length)
+uint8_t STServo_BuildPacket(STServo_Packet_t *packet, uint8_t id, uint8_t instruction,
+                           const uint8_t *parameters, uint8_t param_length)
 {
   if (!packet) {
     return 0;
   }
 
   // Build packet
-  packet[0] = ST_SERVO_FRAME_HEADER;
-  packet[1] = ST_SERVO_FRAME_HEADER2;
-  packet[2] = id;
-  packet[3] = param_length + 2;  // instruction + checksum
-  packet[4] = instruction;
+  packet->header[0] = ST_SERVO_FRAME_HEADER;
+  packet->header[1] = ST_SERVO_FRAME_HEADER2;
+  packet->id = id;
+  packet->length = param_length + 2;  // instruction + checksum
+  packet->instruction = instruction;
 
   // Copy parameters if provided
   if (parameters && param_length > 0) {
-    memcpy(&packet[5], parameters, param_length);
+    memcpy(packet->parameters, parameters, param_length);
   }
 
   // Calculate and set checksum
   uint8_t total_length = 4 + param_length + 1;  // header + id + length + instruction + params
-  packet[5 + param_length] = STServo_CalculateChecksum((uint8_t*)packet, total_length);
+  packet->checksum = STServo_CalculateChecksum((uint8_t*)packet, total_length);
 
   return total_length + 1;  // Include checksum in total length
 }
+//uint8_t STServo_BuildPacket(uint8_t *packet, uint8_t id, uint8_t instruction, const uint8_t *parameters, uint8_t param_length)
+//{
+//  if (!packet) {
+//    return 0;
+//  }
+//
+//  // Build packet
+//  packet[0] = ST_SERVO_FRAME_HEADER;
+//  packet[1] = ST_SERVO_FRAME_HEADER2;
+//  packet[2] = id;
+//  packet[3] = param_length + 2;  // instruction + checksum
+//  packet[4] = instruction;
+//
+//  // Copy parameters if provided
+//  if (parameters && param_length > 0) {
+//    memcpy(&packet[5], parameters, param_length);
+//  }
+//
+//  // Calculate and set checksum
+//  uint8_t total_length = 4 + param_length + 1;  // header + id + length + instruction + params
+//  packet[5 + param_length] = STServo_CalculateChecksum((uint8_t*)packet, total_length);
+//
+//  return total_length + 1;  // Include checksum in total length
+//}

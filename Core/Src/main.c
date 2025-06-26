@@ -118,31 +118,31 @@ int main(void)
   MX_USART3_UART_Init();
   MX_ADC1_Init();
   MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
   printf("\r\n\n\n======================================== \n\rSTM32F7 Peripherals Initialized\n\r");
   reset_cause_t reset_cause = reset_cause_get();
   printf("The system reset cause is \"%s\"\n\r", reset_cause_get_name(reset_cause));
   printf("Start osKernel Init \n\r");
 
-  uint8_t servo_id = 0x04;
-  uint8_t cmd      = 0x01;
-  uint8_t len      = 0x02;
-  uint8_t checksum   = ~(servo_id + len + cmd) & 0xFF;
-  uint8_t pkt[6]   = {0xFF, 0xFF, servo_id, len, cmd, checksum};
+//  uint8_t servo_id = 0x04;
+//  uint8_t cmd      = 0x01;
+//  uint8_t len      = 0x02;
+//  uint8_t checksum   = ~(servo_id + len + cmd) & 0xFF;
+//  uint8_t pkt[6]   = {0xFF, 0xFF, servo_id, len, cmd, checksum};
+//
+//  HAL_UART_Transmit(&huart1, pkt, sizeof(pkt), 10);
+//
+//  uint8_t ans[6];
+//  if (HAL_UART_Receive(&huart1, ans, sizeof(ans), 500) == HAL_OK) {
+//    printf("Got reply: %02X %02X %02X %02X %02X %02X \n\r",
+//             ans[0], ans[1], ans[2], ans[3], ans[4], ans[5]);
+//  } else {
+//    printf("no reply\n\r");
+//  }
 
-  HAL_UART_Transmit(&huart1, pkt, sizeof(pkt), 10);
 
-  uint8_t ans[6];
-  if (HAL_UART_Receive(&huart1, ans, sizeof(ans), 500) == HAL_OK) {
-    printf("Got reply: %02X %02X %02X %02X %02X %02X \n\r",
-             ans[0], ans[1], ans[2], ans[3], ans[4], ans[5]);
-  } else {
-    printf("no reply\n\r");
-  }
-
-
-  //MX_IWDG_Init();
+  MX_IWDG_Init();
 
   /* USER CODE END 2 */
 

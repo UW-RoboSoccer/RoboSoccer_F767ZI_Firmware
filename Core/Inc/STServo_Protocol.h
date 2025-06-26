@@ -53,7 +53,8 @@ typedef struct {
 // Communication functions
 uint8_t STServo_CalculateChecksum(const uint8_t *packet, uint8_t length);
 bool STServo_ValidateChecksum(const uint8_t *packet, uint8_t length);
-uint8_t STServo_BuildPacket(uint8_t *packet, uint8_t id, uint8_t instruction, const uint8_t *parameters, uint8_t param_length);
+uint8_t STServo_BuildPacket(STServo_Packet_t *packet, uint8_t id, uint8_t instruction,
+                           const uint8_t *parameters, uint8_t param_length);
 
 #ifdef __cplusplus
 }
