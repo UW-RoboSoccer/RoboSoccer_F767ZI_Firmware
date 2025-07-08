@@ -1,8 +1,6 @@
 /*
  * imu_driver.h
  *
- *
- * Author:    Bowen Zheng
  */
 
 #ifndef INC_SPI_DRIVER_H_
@@ -11,50 +9,50 @@
 #include "sh2_hal.h"
 
 /* Public defines  ----------------------------------------------------------*/
-#define   SHTP_HEADER_SIZE                4U
-#define   SHTP_PKT_LEN_MSK                0x7FFFU
+#define SHTP_HEADER_SIZE                4U
+#define SHTP_PKT_LEN_MSK                0x7FFFU
 
-#define   BNO08X_REPORT_1000HZ            1000U       // microsecond
-#define   BNO08X_REPORT_500HZ             2000U       // microsecond
-#define   BNO08X_REPORT_400HZ             2500U       // microsecond
+#define BNO08X_REPORT_1000HZ            1000U       // microsecond
+#define BNO08X_REPORT_500HZ             2000U       // microsecond
+#define BNO08X_REPORT_400HZ             2500U       // microsecond
 
-#define   SPI_READ_SHTP_HEADER_TIMEOUT    10U         // millisecond
-#define   SPI_READ_SHTP_DATA_TIMEOUT      10U         // millisecond
+#define SPI_READ_SHTP_HEADER_TIMEOUT    10U         // millisecond
+#define SPI_READ_SHTP_DATA_TIMEOUT      10U         // millisecond
 
-#define   IMU_RESET_DELAY                 10000U      // microsecond
-#define   IMU_START_RESET_DELAY           2000000U    // microsecond
-#define   IMU_START_INIT_DELAY            200000U     // microsecond
+#define IMU_RESET_DELAY                 10000U      // microsecond
+#define IMU_START_RESET_DELAY           2000000U    // microsecond
+#define IMU_START_INIT_DELAY            200000U     // microsecond
 
 /*-------------- imu_error_flags ---------------*/
-#define   IMU_PERIPHERAL_FAILURE          0x0001U
-#define   IMU_COMMUNICATION_TIMEOUT       0x0002U
-#define   IMU_HEADER_DATA_ERROR           0x0004U
-#define   IMU_TRANSMIT_ERROR              0x0008U
-#define   IMU_SH2_FAILED_TO_OPEN          0x0010U
-#define   IMU_READ_HEADER_FAILURE         0x0020U
-#define   IMU_READ_PKT_FAILURE            0x0040U
-#define   IMU_SENSOR_DISABLE_FAILURE      0x0080U
-#define   IMU_SENSOR_ENABLE_FAILURE       0x0100U
-#define   IMU_SPI_COMPLETE_FSM_ERROR      0x0200U
-#define   IMU_FAILED_TO_BOOT              0x0400U
-#define   IMU_DECODE_SENSOR_EVENT_ERROR   0x0800U
-#define   IMU_INIT_SENSOR_EVENT_ERROR     0x1000U
+#define IMU_PERIPHERAL_FAILURE          0x0001U
+#define IMU_COMMUNICATION_TIMEOUT       0x0002U
+#define IMU_HEADER_DATA_ERROR           0x0004U
+#define IMU_TRANSMIT_ERROR              0x0008U
+#define IMU_SH2_FAILED_TO_OPEN          0x0010U
+#define IMU_READ_HEADER_FAILURE         0x0020U
+#define IMU_READ_PKT_FAILURE            0x0040U
+#define IMU_SENSOR_DISABLE_FAILURE      0x0080U
+#define IMU_SENSOR_ENABLE_FAILURE       0x0100U
+#define IMU_SPI_COMPLETE_FSM_ERROR      0x0200U
+#define IMU_FAILED_TO_BOOT              0x0400U
+#define IMU_DECODE_SENSOR_EVENT_ERROR   0x0800U
+#define IMU_INIT_SENSOR_EVENT_ERROR     0x1000U
 /*----------------------------------------------*/
 
 /*--------------- imu_hal_flags ----------------*/
-#define   IMU_HAL_OPENED                  0x01U
-#define   IMU_INT_SERVICED                0x02U
-#define   IMU_IN_RESET                    0x04U
-#define   IMU_RESET_OCCURRED              0x08U
+#define IMU_HAL_OPENED                  0x01U
+#define IMU_INT_SERVICED                0x02U
+#define IMU_IN_RESET                    0x04U
+#define IMU_RESET_OCCURRED              0x08U
 /*----------------------------------------------*/
 
-#define   IMU_CS_SET_LOW()                SPI_IMU_CS_GPIO_Port->BSRR = (uint32_t)SPI_IMU_CS_Pin << 16U
-#define   IMU_CS_SET_HIGH()               SPI_IMU_CS_GPIO_Port->BSRR = (uint32_t)SPI_IMU_CS_Pin
-#define   IMU_RST_SET_LOW()               SPI_IMU_RST_GPIO_Port->BSRR = (uint32_t)SPI_IMU_RST_Pin << 16U
-#define   IMU_RST_SET_HIGH()              SPI_IMU_RST_GPIO_Port->BSRR = (uint32_t)SPI_IMU_RST_Pin
-#define   IMU_WAKE_PS0_SET_LOW()          SPI_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)SPI_IMU_PS0_WAKE_Pin << 16U
-#define   IMU_WAKE_PS0_SET_HIGH()         SPI_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)SPI_IMU_PS0_WAKE_Pin
-#define   ARRAY_LEN(a)                    ((sizeof(a))/(sizeof(a[0])))
+#define IMU_CS_SET_LOW()                SPI_IMU_CS_GPIO_Port->BSRR = (uint32_t)SPI_IMU_CS_Pin << 16U
+#define IMU_CS_SET_HIGH()               SPI_IMU_CS_GPIO_Port->BSRR = (uint32_t)SPI_IMU_CS_Pin
+#define IMU_RST_SET_LOW()               SPI_IMU_RST_GPIO_Port->BSRR = (uint32_t)SPI_IMU_RST_Pin << 16U
+#define IMU_RST_SET_HIGH()              SPI_IMU_RST_GPIO_Port->BSRR = (uint32_t)SPI_IMU_RST_Pin
+#define IMU_WAKE_PS0_SET_LOW()          SPI_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)SPI_IMU_PS0_WAKE_Pin << 16U
+#define IMU_WAKE_PS0_SET_HIGH()         SPI_IMU_PS0_WAKE_GPIO_Port->BSRR = (uint32_t)SPI_IMU_PS0_WAKE_Pin
+#define ARRAY_LEN(a)                    ((sizeof(a))/(sizeof(a[0])))
 
 /* Public typedef  ----------------------------------------------------------*/
 typedef enum {

@@ -142,7 +142,7 @@ int main(void)
 //  }
 
 
-  MX_IWDG_Init();
+  //MX_IWDG_Init();
 
   /* USER CODE END 2 */
 
@@ -242,8 +242,7 @@ reset_cause_t reset_cause_get(void)
     reset_cause = RESET_CAUSE_INDEPENDENT_WATCHDOG_RESET;
   }
   else if (__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST)) {
-    // This reset is induced by calling the ARM CMSIS
-    // `NVIC_SystemReset()` function!
+    // This reset is induced by calling the ARM CMSIS NVIC_SystemReset() function
     reset_cause = RESET_CAUSE_SOFTWARE_RESET;
   }
   else if (__HAL_RCC_GET_FLAG(RCC_FLAG_PORRST)) {
@@ -252,8 +251,6 @@ reset_cause_t reset_cause_get(void)
   else if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST)) {
     reset_cause = RESET_CAUSE_EXTERNAL_RESET_PIN_RESET;
   }
-  // Needs to come *after* checking the `RCC_FLAG_PORRST` flag in order to
-  // ensure first that the reset cause is NOT a POR/PDR reset. See note below.
   else if (__HAL_RCC_GET_FLAG(RCC_FLAG_BORRST)) {
     reset_cause = RESET_CAUSE_BROWNOUT_RESET;
   }
@@ -270,10 +267,10 @@ reset_cause_t reset_cause_get(void)
 
 
 /**
-  * @brief      Obtain the system reset cause as an ASCII-printable name string
-  *             from a reset cause type
-  * @param[in]  reset_cause     The previously-obtained system reset cause
-  * @return     A null-terminated ASCII name string describing the system reset cause
+  * @brief    Obtain the system reset cause as an ASCII-printable name string
+  *           from a reset cause type
+  * @param    reset_cause The previously-obtained system reset cause
+  * @return   A null-terminated ASCII name string describing the system reset cause
   */
 const char* reset_cause_get_name(reset_cause_t reset_cause)
 {

@@ -16,7 +16,6 @@
   *
   ******************************************************************************
   *
-  * Author:    Bowen Zheng
   */
 
 #include "spi.h"
@@ -104,13 +103,13 @@ static void imu_hal_disable_interrupt(void)
 
 
 /**
-  * @brief  MCU busy wait fn for INT pin to be serviced after imu reset
-  * @param  us_delay microsecond delay
-  * @note   "After power up or reset the BNO08X will assert the interrupt (HOST_INTN)
-  *         indicating that the reset routine has completed and that the BNO08X
-  *         is ready for communication." [2] section 5.2.1
-  *         IMU_IN_RESET flag reset when INT pin is serviced
-  */
+ * @brief  MCU busy wait fn for INT pin to be serviced after imu reset
+ * @param  us_delay microsecond delay
+ * @note   "After power up or reset the BNO08X will assert the interrupt (HOST_INTN)
+ *         indicating that the reset routine has completed and that the BNO08X
+ *         is ready for communication." [2] section 5.2.1
+ *         IMU_IN_RESET flag reset when INT pin is serviced
+ */
 static imu_status_t imu_reset_delay(uint32_t us_delay)
 {
   volatile uint32_t now = MICRO_SECOND_STAMP();
@@ -138,10 +137,10 @@ static void delay(uint32_t us_delay)
 }
 
 /**
-  * @brief  imu spi dummy blocking communication
-  * @note   We need to establish SCLK in proper initial state.
-  *         Do one SPI operation with reset asserted and no CS asserted to get clock sorted.
-  */
+ * @brief  imu spi dummy blocking communication
+ * @note   We need to establish SCLK in proper initial state.
+ *         Do one SPI operation with reset asserted and no CS asserted to get clock sorted.
+ */
 static void spi_dummy_TransmitReceive(void)
 {
   uint8_t dummyTx[1];
@@ -153,10 +152,10 @@ static void spi_dummy_TransmitReceive(void)
 
 
 /**
-  * @brief  imu spi interrupt start receive helper fn, transmit dummy buffer
-  * @param  *rx_buffer Pointer to receive buffer
-  * @param  len number of bytes will process
-  */
+ * @brief  imu spi interrupt start receive helper fn, transmit dummy buffer
+ * @param  *rx_buffer Pointer to receive buffer
+ * @param  len number of bytes will process
+ */
 static spi_status_t imu_start_Receive(uint8_t *rx_buffer, uint16_t len)
 {
   HAL_StatusTypeDef retval = HAL_SPI_TransmitReceive_IT(&hspi3,
@@ -175,10 +174,10 @@ static spi_status_t imu_start_Receive(uint8_t *rx_buffer, uint16_t len)
 
 
 /**
-  * @brief  imu spi interrupt start transmit helper fn, capture return data to RxBuffer
-  * @param  *rx_buffer Pointer to receive buffer
-  * @param  len number of bytes will process
-  */
+ * @brief  imu spi interrupt start transmit helper fn, capture return data to RxBuffer
+ * @param  *rx_buffer Pointer to receive buffer
+ * @param  len number of bytes will process
+ */
 static spi_status_t imu_start_Transmit(uint8_t *tx_buffer, uint16_t len)
 {
   HAL_StatusTypeDef retval = HAL_SPI_TransmitReceive_IT(&hspi3,
@@ -197,9 +196,9 @@ static spi_status_t imu_start_Transmit(uint8_t *tx_buffer, uint16_t len)
 
 
 /**
-  * @brief Read payload length from shtp header helper fn
-  * @retval 16 bit payload length
-  */
+ * @brief Read payload length from shtp header helper fn
+ * @retval 16 bit payload length
+ */
 static uint16_t imu_get_payload_length(void)
 {
   uint8_t shtp_len_lsb = imu_spi.RxBuffer[0];
@@ -226,10 +225,10 @@ static uint16_t imu_get_payload_length(void)
 
 
 /**
-  * @brief  Non-blocking read shtp packet helper fn
-  * @param  pkt_len packet length word
-  * @retval Is spi transmission successful
-  */
+ * @brief  Non-blocking read shtp packet helper fn
+ * @param  pkt_len packet length word
+ * @retval Is spi transmission successful
+ */
 static void imu_read_shtp_pkt(uint16_t rx_len)
 {
   if (imu_start_Receive((uint8_t*)imu_spi.RxBuffer + SHTP_HEADER_SIZE,
@@ -242,8 +241,8 @@ static void imu_read_shtp_pkt(uint16_t rx_len)
 
 
 /**
-  * @brief Attempt to start a spi operation
-  */
+ * @brief Attempt to start a spi operation
+ */
 void imu_spi_activate(void)
 {
   // Return if bus is busy or previous packet still exist
@@ -297,9 +296,9 @@ void imu_spi_activate(void)
 
 
 /**
-  * @brief Handles the end of a spi operation based on SPI state
-  * @note  Called in HAL_SPI_TxRxCpltCallback (spi transfer completed)
-  */
+ * @brief Handles the end of a spi operation based on SPI state
+ * @note  Called in HAL_SPI_TxRxCpltCallback (spi transfer completed)
+ */
 void imu_spi_completed(void)
 {
   // Get avaliable payload length, truncate if too long
@@ -365,10 +364,10 @@ void imu_spi_completed(void)
 
 
 /**
-  * @brief  IMU SH2 fn pointer for sh2_Hal_s (*open)
-  * @note   The SH2 interface uses these functions to access the underlying
-  *         communications device. Detailed description can be found in "sh2_hal.h"
-  */
+ * @brief  IMU SH2 fn pointer for sh2_Hal_s (*open)
+ * @note   The SH2 interface uses these functions to access the underlying
+ *         communications device. Detailed description can be found in "sh2_hal.h"
+ */
 static int imu_hal_open(sh2_Hal_t *self)
 {
   (void)self;
@@ -427,10 +426,10 @@ static int imu_hal_open(sh2_Hal_t *self)
 
 
 /**
-  * @brief  IMU SH2 fn pointers for sh2_Hal_s (*close)
-  * @note   The SH2 interface uses these functions to access the underlying
-  *         communications device. Detailed description can be found in "sh2_hal.h"
-  */
+ * @brief  IMU SH2 fn pointers for sh2_Hal_s (*close)
+ * @note   The SH2 interface uses these functions to access the underlying
+ *         communications device. Detailed description can be found in "sh2_hal.h"
+ */
 static void imu_hal_close(sh2_Hal_t *self)
 {
   (void)self;
@@ -452,10 +451,10 @@ static void imu_hal_close(sh2_Hal_t *self)
 
 
 /**
-  * @brief  IMU SH2 fn pointer for sh2_Hal_s (*read)
-  * @note   The SH2 interface uses these functions to access the underlying
-  *         communications device. Detailed description can be found in "sh2_hal.h"
-  */
+ * @brief  IMU SH2 fn pointer for sh2_Hal_s (*read)
+ * @note   The SH2 interface uses these functions to access the underlying
+ *         communications device. Detailed description can be found in "sh2_hal.h"
+ */
 static int imu_hal_read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_t *t_us)
 {
   (void)self;
@@ -489,10 +488,10 @@ static int imu_hal_read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_
 
 
 /**
-  * @brief  IMU SH2 fn pointer for sh2_Hal_s (*write)
-  * @note   The SH2 interface uses these functions to access the underlying
-  *         communications device. Detailed description can be found in "sh2_hal.h"
-  */
+ * @brief  IMU SH2 fn pointer for sh2_Hal_s (*write)
+ * @note   The SH2 interface uses these functions to access the underlying
+ *         communications device. Detailed description can be found in "sh2_hal.h"
+ */
 static int imu_hal_write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len)
 {
   int retval = SH2_OK;
@@ -526,10 +525,10 @@ static int imu_hal_write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len)
 
 
 /**
-  * @brief  IMU SH2 fn pointer for sh2_Hal_s (*getTimeUs)
-  * @note   The SH2 interface uses these functions to access the underlying
-  *         communications device. Detailed description can be found in "sh2_hal.h"
-  */
+ * @brief  IMU SH2 fn pointer for sh2_Hal_s (*getTimeUs)
+ * @note   The SH2 interface uses these functions to access the underlying
+ *         communications device. Detailed description can be found in "sh2_hal.h"
+ */
 static uint32_t imu_hal_get_time(sh2_Hal_t *self)
 {
   (void)self;
@@ -538,8 +537,8 @@ static uint32_t imu_hal_get_time(sh2_Hal_t *self)
 
 
 /**
-  * @brief  IMU interface to SH-2 middleware
-  */
+ * @brief  IMU interface to SH-2 middleware
+ */
 static sh2_Hal_t *imu_get_hal(void)
 {
   // Assign fn addresses
@@ -554,8 +553,8 @@ static sh2_Hal_t *imu_get_hal(void)
 
 
 /**
-  * @brief  sh2 non-sensor event callback handler definition
-  */
+ * @brief  sh2 non-sensor event callback handler definition
+ */
 static void sh2_eventHanlder(void *cookie, sh2_AsyncEvent_t *pEvt)
 {
   (void)cookie;
@@ -601,8 +600,8 @@ static void sh2_eventHanlder(void *cookie, sh2_AsyncEvent_t *pEvt)
 
 
 /**
-  * @brief  IMU sensor data event callback handler definition
-  */
+ * @brief  IMU sensor data event callback handler definition
+ */
 static void imu_dataHandler(void * cookie, sh2_SensorEvent_t *pEvent)
 {
   (void)cookie;
@@ -630,8 +629,8 @@ static void imu_dataHandler(void * cookie, sh2_SensorEvent_t *pEvent)
 
 
 /**
-  * @brief Read product ids with version info from the hub.
-  */
+ * @brief Read product ids with version info from the hub.
+ */
 static void imu_report_sensorIds(void)
 {
   int status;
@@ -656,10 +655,10 @@ static void imu_report_sensorIds(void)
 
 
 /**
-  * @brief Configure imu to generate periodic reports
-  * @note Each entry of sensorConfig[] represents one sensor to be configured in the loop
-  * @retval Is imu operation successful
-  */
+ * @brief Configure imu to generate periodic reports
+ * @note Each entry of sensorConfig[] represents one sensor to be configured in the loop
+ * @retval Is imu operation successful
+ */
 static imu_status_t imu_start_reports(void)
 {
   static struct {
@@ -707,9 +706,9 @@ static imu_status_t imu_start_reports(void)
 
 
 /**
-  * @brief  IMU initialzation fn
-  * @retval Is imu operation successful
-  */
+ * @brief  IMU initialzation fn
+ * @retval Is imu operation successful
+ */
 imu_status_t imu_sys_init(void)
 {
   // Open SH2 interface and register SH2 events

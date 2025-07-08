@@ -282,7 +282,6 @@ void StartImuTask(void *argument)
   {
     // Cyclically service sh2
     imu_service();
-
     vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(1));
   }
   /* USER CODE END StartImuTask */
@@ -317,27 +316,28 @@ void StartMotorTask(void *argument)
     printf("Motor 4 Connected \n\r");
   }
 
-//  const int16_t position[5] = {0, 1024, 2048, 3072, 4095};
-//  const uint16_t speed = 0;
-//  const uint8_t acc = 0; // Ramp up as fast as possible
+  const int16_t position[5] = {0, 1024, 2048, 3072, 4095};
+  const uint16_t speed = 4095;
+  const uint8_t acc = 0; // Ramp up as fast as possible
+  const uint16_t time = 0;
   /* Infinite loop */
   for(;;)
   {
-//    for (uint8_t i = 0; i < 5; i++) {
-//      if (STServo_WritePosition(&hservo, 2, position[i], speed, acc)) {
-//        printf("Servo %u moved to %d\n\r", 2, position[i]);
-//      } else {
-//        STServo_Error_t err = STServo_GetLastError(&hservo);
-//        printf("Servo %u error: %s\n\r", 2, STServo_GetErrorString(err));
-//      }
-//      if (STServo_WritePosition(&hservo, 4, position[i], speed, acc)) {
-//        printf("Servo %u moved to %d\n\r", 4, position[i]);
-//      } else {
-//        STServo_Error_t err = STServo_GetLastError(&hservo);
-//        printf("Servo %u error: %s\n\r", 4, STServo_GetErrorString(err));
-//      }
-    osDelay(800);
-
+    for (uint8_t i = 0; i < 5; i++) {
+      if (STServo_WritePosition(&hservo, 2, position[i], speed, time, acc)) {
+        printf("Servo %u moved to %d\n\r", 2, position[i]);
+      } else {
+        STServo_Error_t err = STServo_GetLastError(&hservo);
+        printf("Servo %u error: %s\n\r", 2, STServo_GetErrorString(err));
+      }
+      if (STServo_WritePosition(&hservo, 4, position[i], speed, time, acc)) {
+        printf("Servo %u moved to %d\n\r", 4, position[i]);
+      } else {
+        STServo_Error_t err = STServo_GetLastError(&hservo);
+        printf("Servo %u error: %s\n\r", 4, STServo_GetErrorString(err));
+      }
+      osDelay(2000);
+    }
   }
   /* USER CODE END StartMotorTask */
 }
