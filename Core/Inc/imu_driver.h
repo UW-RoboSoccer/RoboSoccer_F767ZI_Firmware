@@ -24,6 +24,7 @@
 #define IMU_START_INIT_DELAY            200000U     // microsecond
 
 /*-------------- imu_error_flags ---------------*/
+#define IMU_ERROR_NONE                  0x0000U
 #define IMU_PERIPHERAL_FAILURE          0x0001U
 #define IMU_COMMUNICATION_TIMEOUT       0x0002U
 #define IMU_HEADER_DATA_ERROR           0x0004U

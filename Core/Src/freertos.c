@@ -97,6 +97,11 @@ osSemaphoreId_t motorTxSemHandle;
 const osSemaphoreAttr_t motorTxSem_attributes = {
   .name = "motorTxSem"
 };
+/* Definitions for ServoEvent */
+osEventFlagsId_t ServoEventHandle;
+const osEventFlagsAttr_t ServoEvent_attributes = {
+  .name = "ServoEvent"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -162,10 +167,10 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the semaphores(s) */
   /* creation of adcSem */
-  adcSemHandle = osSemaphoreNew(1, 1, &adcSem_attributes);
+  adcSemHandle = osSemaphoreNew(1, 0, &adcSem_attributes);
 
   /* creation of motorTxSem */
-  motorTxSemHandle = osSemaphoreNew(1, 1, &motorTxSem_attributes);
+  motorTxSemHandle = osSemaphoreNew(1, 0, &motorTxSem_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -202,6 +207,10 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
+  /* Create the event(s) */
+  /* creation of ServoEvent */
+  ServoEventHandle = osEventFlagsNew(&ServoEvent_attributes);
+
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
@@ -228,6 +237,14 @@ void StartAnalogTask(void *argument)
     if (ADC1_ReadAverage(ADC1_FILTER_SIZE, FSR_ADC_TIMEOUT) != ADC_OK)  {
       RoboSoccer_errorHandler();
     }
+    if (STServo_ReadPosition(&hservo, 2) != SERVO_OK) {
+      STServo_Error_t err = STServo_GetLastError(&hservo);
+      printf("Servo %u error: %s\n\r", 2, STServo_GetErrorString(err));
+    }
+    if (STServo_ReadPosition(&hservo, 4) != SERVO_OK) {
+      STServo_Error_t err = STServo_GetLastError(&hservo);
+      printf("Servo %u error: %s\n\r", 4, STServo_GetErrorString(err));
+    }
     vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(1));
   }
   /* USER CODE END StartAnalogTask */
@@ -244,18 +261,18 @@ void StartGeneralTask0(void *argument)
 {
   /* USER CODE BEGIN StartGeneralTask0 */
   (void)argument;
-  // Give the first second to imu task
   TickType_t xWakeTime = xTaskGetTickCount();
   printf("Running GeneralTask 100ms loop \r\n");
   /* Infinite loop */
   for(;;)
   {
-    if (filtered_adc1_buffer[0] > 3000) {
+    if (filtered_adc1_buffer[0] > 150) {
       LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin;
     } else {
       LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin << 16;
     }
-    // printf("adc1[0] Reading: %d \r\n", filtered_adc1_buffer[0]);
+    //printf("adc1[0] Reading: %d \r\n", filtered_adc1_buffer[0]);
+    //printf("adc1[1] Reading: %d \r\n", filtered_adc1_buffer[1]);
     vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(100));
   }
   /* USER CODE END StartGeneralTask0 */
@@ -324,18 +341,34 @@ void StartMotorTask(void *argument)
   for(;;)
   {
     for (uint8_t i = 0; i < 5; i++) {
-      if (STServo_WritePosition(&hservo, 2, position[i], speed, time, acc)) {
-        printf("Servo %u moved to %d\n\r", 2, position[i]);
-      } else {
+      // Write control table
+      servo_control[2].goal_acc = acc;
+      servo_control[2].goal_position = position[i];
+      servo_control[2].goal_speed = speed;
+      servo_control[2].goal_time = time;
+
+      servo_control[4].goal_acc = acc;
+      servo_control[4].goal_position = position[4 - i];
+      servo_control[4].goal_speed = speed;
+      servo_control[4].goal_time = time;
+
+      if (STServo_SyncWritePosition(&hservo) != SERVO_OK) {
         STServo_Error_t err = STServo_GetLastError(&hservo);
-        printf("Servo %u error: %s\n\r", 2, STServo_GetErrorString(err));
+        printf("Servo %u error: %s\n\r", 0xFE, STServo_GetErrorString(err));
       }
-      if (STServo_WritePosition(&hservo, 4, position[i], speed, time, acc)) {
-        printf("Servo %u moved to %d\n\r", 4, position[i]);
-      } else {
-        STServo_Error_t err = STServo_GetLastError(&hservo);
-        printf("Servo %u error: %s\n\r", 4, STServo_GetErrorString(err));
-      }
+//      if (STServo_WritePosition(&hservo, 2, position[i], speed, time, acc) == SERVO_OK) {
+//        printf("Servo %u moved to %d\n\r", 2, position[i]);
+//      } else {
+//        STServo_Error_t err = STServo_GetLastError(&hservo);
+//        printf("Servo %u error: %s\n\r", 2, STServo_GetErrorString(err));
+//      }
+//      if (STServo_WritePosition(&hservo, 4, position[i], speed, time, acc) == SERVO_OK) {
+//        printf("Servo %u moved to %d\n\r", 4, position[i]);
+//      } else {
+//        STServo_Error_t err = STServo_GetLastError(&hservo);
+//        printf("Servo %u error: %s\n\r", 4, STServo_GetErrorString(err));
+//      }
+
       osDelay(2000);
     }
   }

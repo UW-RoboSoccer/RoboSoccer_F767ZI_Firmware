@@ -84,11 +84,14 @@ const char* reset_cause_get_name(reset_cause_t reset_cause);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
   SCB_InvalidateICache();
   SCB_InvalidateDCache();
 
   /* USER CODE END 1 */
+
+  /* Enable the CPU Cache */
 
   /* Enable I-Cache---------------------------------------------------------*/
   SCB_EnableICache();
@@ -125,35 +128,40 @@ int main(void)
   printf("The system reset cause is \"%s\"\n\r", reset_cause_get_name(reset_cause));
   printf("Start osKernel Init \n\r");
 
-//  uint8_t servo_id = 0x04;
-//  uint8_t cmd      = 0x01;
-//  uint8_t len      = 0x02;
-//  uint8_t checksum   = ~(servo_id + len + cmd) & 0xFF;
-//  uint8_t pkt[6]   = {0xFF, 0xFF, servo_id, len, cmd, checksum};
-//
-//  HAL_UART_Transmit(&huart1, pkt, sizeof(pkt), 10);
-//
-//  uint8_t ans[6];
-//  if (HAL_UART_Receive(&huart1, ans, sizeof(ans), 500) == HAL_OK) {
-//    printf("Got reply: %02X %02X %02X %02X %02X %02X \n\r",
-//             ans[0], ans[1], ans[2], ans[3], ans[4], ans[5]);
-//  } else {
-//    printf("no reply\n\r");
-//  }
-
-
+  // IWDG disabled for debugging
   //MX_IWDG_Init();
-
+//  uint32_t  raw_ch1;
+//  while (1) {
+//
+//    /* 1. Make sure the ADC is not already in DMA mode */
+//    HAL_ADC_Stop_DMA(&hadc1);          /* harmless if DMA wasn’t running   */
+//    ADC_ChannelConfTypeDef sConfig = {0};
+//    sConfig.Channel = ADC_CHANNEL_6;
+//    sConfig.Rank = 1;
+//    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+//     {
+//       Error_Handler();
+//     }
+//    HAL_ADC_Start(&hadc2);
+//    HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+//    raw_ch1 = HAL_ADC_GetValue(&hadc2);   /* Rank-1 (Channel 1) */
+//
+//    printf("ch6 Reading: %ld \r\n", raw_ch1);
+//
+//    HAL_ADC_Stop(&hadc1);                 /* release the peripheral */
+//    HAL_Delay(500);
+//  }
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
 
   /* Start scheduler */
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -320,7 +328,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM6) {
+  if (htim->Instance == TIM6)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -344,8 +353,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

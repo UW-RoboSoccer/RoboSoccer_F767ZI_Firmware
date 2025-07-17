@@ -20,6 +20,7 @@
 extern "C" {
 #endif
 
+/* Public defines  ----------------------------------------------------------*/
 // Baud rate definitions
 #define SMS_STS_1M                  0
 #define SMS_STS_0_5M                1
@@ -78,6 +79,7 @@ extern "C" {
 #define ST_SERVO_BROADCAST_ID       0xFE
 #define ST_SERVO_MAX_BUFFER_SIZE    0xFF
 #define ST_SERVO_DEFAULT_RSP_SIZE   6
+#define ST_SERVO_RD_RSP_SIZE        8
 
 // Instruction set
 #define ST_INST_PING                0x01
@@ -89,12 +91,12 @@ extern "C" {
 #define ST_INST_SYNC_WRITE          0x83
 
 // Application constants
-#define MAX_SERVO_ID                24
-#define RX_RING_BUFFER_SIZE         512           // Power of 2
+#define MAX_SERVO_ID                20            // Max 30 for sync write command
+#define RX_RING_BUFFER_SIZE         512           // Must be a power of 2
+#define SERVO_RX_TIMEOUT            1             // millisecond
 
-/*------------- error_flags ---------------*/
-// These maps the error flags received from the motor
-// Loaded to STServo_Status_t
+/*--------------- hw_error_flags ---------------*/
+// Maps to the error flags received from the motor
 #define ST_ERROR_NONE               0x00
 #define ST_ERROR_VOLTAGE            0x01
 #define ST_ERROR_ANGLE_LIMIT        0x02
@@ -103,16 +105,50 @@ extern "C" {
 #define ST_ERROR_CHECKSUM           0x10
 #define ST_ERROR_OVERLOAD           0x20
 #define ST_ERROR_INSTRUCTION        0x40
-/*-----------------------------------------*/
+/*----------------------------------------------*/
 
-/*------------ status_flags ---------------*/
-#define MOTOR_IS_ONLINE             0x00;
-#define MOTOR_IS_MOVING             0x01;
-/*-----------------------------------------*/
+/*--------------- sw_error_flags ---------------*/
+#define SERVO_ERROR_NONE            0x00
+#define SERVO_PING_TX_FAILURE       0x01
+#define SERVO_PING_RX_FAILURE       0x02
+#define SERVO_SYNC_TX_OVERFLOW      0x04
+#define SERVO_SYNC_TX_FAILURE       0x08
+#define SERVO_RD_TX_FAILURE         0x10
+#define SERVO_RD_RX_FAILURE         0x20
+/*----------------------------------------------*/
+
+/*--------------- status_flags -----------------*/
+#define MOTOR_IS_ONLINE             0x01
+#define MOTOR_IS_MOVING             0x02
+/*----------------------------------------------*/
+
+#define RX_RING_MSK                 (RX_RING_BUFFER_SIZE - 1)
+
+// Push one byte into rx->buffer, advance tail with wrap
+#define RING_PUSH(hrx_, byte_)                         \
+  do {                                               \
+    (hrx_)->buffer[(hrx_)->tail] = (byte_);             \
+    (hrx_)->tail = ((hrx_)->tail + 1) & RX_RING_MSK;   \
+  } while (0)
+
+// pop one byte from rx->buffer, advance head with wrap
+#define RING_POP(hrx_, byte_)                          \
+  do {                                               \
+    (byte_) = (hrx_)->buffer[(hrx_)->head];             \
+    (hrx_)->head = ((hrx_)->head + 1) & RX_RING_MSK;   \
+  } while (0)
+
+// Set software error flag to every online servo
+#define SERVO_SET_ERROR_ALL_ONLINE(flag_)                      \
+  do {                                                       \
+    for (uint8_t _id = 0; _id <= MAX_SERVO_ID; ++_id) {        \
+      if (servo_data[_id].status_flags & MOTOR_IS_ONLINE)      \
+        servo_data[_id].sw_error_flags |= (flag_);         \
+    }                                                          \
+  } while (0)
 
 
-
-
+/* Public typedef  ----------------------------------------------------------*/
 // Packet structure
 typedef struct {
   uint8_t header[2];      // 0xFF, 0xFF
@@ -135,25 +171,7 @@ typedef struct {
   uint8_t            tmp_frame[32];
 } STServo_RxHandle_t;
 
-
-#define RX_RING_MSK                 (RX_RING_BUFFER_SIZE - 1)
-
-// Push one byte into rx->buffer, advance tail with wrap
-#define RING_PUSH(hrx, byte)                         \
-  do {                                               \
-    (hrx)->buffer[(hrx)->tail] = (byte);             \
-    (hrx)->tail = ((hrx)->tail + 1) & RX_RING_MSK;   \
-  } while (0)
-
-// pop one byte from rx->buffer, advance head with wrap
-#define RING_POP(hrx, byte)                          \
-  do {                                               \
-    (byte) = (hrx)->buffer[(hrx)->head];             \
-    (hrx)->head = ((hrx)->head + 1) & RX_RING_MSK;   \
-  } while (0)
-
-
-// Servo control structure
+// Servo data handle structure
 typedef struct {
   UART_HandleTypeDef  *huart;
   uint32_t            timeout_ms;
@@ -163,50 +181,58 @@ typedef struct {
   STServo_RxHandle_t  hrx;
 } STServo_Handle_t;
 
-// Servo status structure
+// Servo get status structure
 typedef struct {
   uint8_t status_flags;
   uint8_t hw_error_flags;  // hardware error flags received from the servo
+  uint8_t sw_error_flags;  // servo software error flags
   int16_t position;        // present raw position
   int16_t speed;           // present raw speed
   int16_t load;            // present raw load
   uint8_t voltage;         // present voltage (0.1v)
   uint8_t temperature;     // C
   int16_t current;         // present current (mA)
-} STServo_Status_t;
+} STServo_Data_t;
 
+// Servo control structure
+typedef struct {
+  int16_t  goal_position;     // goal position (0-4095)
+  uint16_t goal_speed;        // goal speed (0-4095)
+  uint8_t  goal_acc;          // goal Acceleration (0 = fastest ramp up)
+  uint16_t goal_time;         // ramp up time (0 = fasted ramp up)
+} STServo_Control_t;
 
 // Error handling
 typedef enum {
-  STSERVO_OK                  = 0,
-  STSERVO_ERROR_TIMEOUT       = 1,
-  STSERVO_ERROR_CHECKSUM      = 2,
-  STSERVO_ERROR_INVALID_PARAM = 3,
-  STSERVO_ERROR_COMM_FAILED   = 4,
-  STSERVO_ERROR_HARDWARE      = 5
+  STSERVO_OK                  = 0U,
+  STSERVO_ERROR_TIMEOUT       = 1U,
+  STSERVO_ERROR_CHECKSUM      = 2U,
+  STSERVO_ERROR_INVALID_PARAM = 3U,
+  STSERVO_ERROR_COMM_FAILED   = 4U,
+  STSERVO_ERROR_HARDWARE      = 5U
 } STServo_Error_t;
 
+// Function return handling
+typedef enum {
+  SERVO_OK        = 0U,
+  SERVO_ERROR     = 1U
+} STServo_Status_t;
 
-// Function prototypes
+
+/* Public function prototypes -----------------------------------------------*/
 // Initialization
 bool STServo_Init(STServo_Handle_t *handle, UART_HandleTypeDef *huart);
 void STServo_DeInit(STServo_Handle_t *handle);
 
 // Basic servo control
-bool STServo_WritePosition(STServo_Handle_t *handle, uint8_t id, int16_t position,
-                           uint16_t speed, uint16_t time, uint8_t acceleration);
-bool STServo_WriteSpeed(STServo_Handle_t *handle, uint8_t id, int16_t speed, uint8_t acceleration);
-bool STServo_EnableTorque(STServo_Handle_t *handle, uint8_t id, bool enable);
+STServo_Status_t STServo_WritePosition(STServo_Handle_t *handle, uint8_t id, int16_t position,
+                                       uint16_t speed, uint16_t time, uint8_t acceleration);
 
-// Advanced control
-bool STServo_RegWritePosition(STServo_Handle_t *handle, uint8_t id, int16_t position,
-                              uint16_t speed, uint8_t acceleration);
-void STServo_RegWriteAction(STServo_Handle_t *handle);
-bool STServo_SyncWritePosition(STServo_Handle_t *handle, uint8_t ids[], uint8_t count,
-                              int16_t positions[], uint16_t speeds[], uint8_t accelerations[]);
+// Advanced servo control
+STServo_Status_t STServo_SyncWritePosition(STServo_Handle_t *handle);
 
 // Feedback functions
-int16_t STServo_ReadPosition(STServo_Handle_t *handle, uint8_t id);
+STServo_Status_t STServo_ReadPosition(STServo_Handle_t *handle, uint8_t id);
 int16_t STServo_ReadSpeed(STServo_Handle_t *handle, uint8_t id);
 int16_t STServo_ReadLoad(STServo_Handle_t *handle, uint8_t id);
 int16_t STServo_ReadVoltage(STServo_Handle_t *handle, uint8_t id);
@@ -216,18 +242,17 @@ bool STServo_IsMoving(STServo_Handle_t *handle, uint8_t id);
 
 // Utility functions
 bool STServo_Ping(STServo_Handle_t *handle, uint8_t id);
-bool STServo_SetWheelMode(STServo_Handle_t *handle, uint8_t id);
-bool STServo_CalibrationOffset(STServo_Handle_t *handle, uint8_t id);
-bool STServo_UnlockEprom(STServo_Handle_t *handle, uint8_t id);
-bool STServo_LockEprom(STServo_Handle_t *handle, uint8_t id);
 
 // Communication functions
 void STServo_ReadFromISR(STServo_Handle_t *handle);
 STServo_Error_t STServo_GetLastError(STServo_Handle_t *handle);
 const char* STServo_GetErrorString(STServo_Error_t error);
 
+
+/* Public variables ---------------------------------------------------------*/
 extern STServo_Handle_t hservo;
-extern STServo_Status_t servo_status[MAX_SERVO_ID];
+extern STServo_Data_t servo_data[MAX_SERVO_ID + 1];
+extern STServo_Control_t servo_control[MAX_SERVO_ID + 1];
 
 #ifdef __cplusplus
 }

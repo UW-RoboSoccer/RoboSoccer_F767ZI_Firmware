@@ -13,7 +13,7 @@
 extern ADC_HandleTypeDef hadc1;
 extern osSemaphoreId_t adcSemHandle;
 /*------------------ FSR DMA Buffers -----------------*/
-__attribute__((aligned(32))) uint16_t adc1_dma_buffer[ADC1_CHANNEL_COUNT] = {0};
+__attribute__((aligned(32))) volatile uint16_t adc1_dma_buffer[ADC1_CHANNEL_COUNT] = {0};
 uint16_t filtered_adc1_buffer[ADC1_CHANNEL_COUNT] = {0};
 /*----------------------------------------------------*/
 volatile uint8_t adc1_error_flags = 0;
@@ -29,10 +29,8 @@ adc_status_t ADC1_ReadAverage(uint8_t filter_size, TickType_t timeout_ms)
 {
   uint32_t sum_buffer[ADC1_CHANNEL_COUNT] = {0};
   for (uint8_t i = 0; i < filter_size; i++) {
-    (void)osSemaphoreAcquire(adcSemHandle, 0);
-
     // Clean data cache before DMA write
-    SCB_CleanDCache_by_Addr((uint32_t*)adc1_dma_buffer, ADC1_CHANNEL_COUNT * sizeof(uint16_t));
+    SCB_CleanDCache_by_Addr((uint32_t*)adc1_dma_buffer, ADC1_CHANNEL_COUNT*sizeof(uint16_t));
 
     if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc1_dma_buffer, ADC1_CHANNEL_COUNT) != HAL_OK) {
       adc1_error_flags |= ADC1_START_ERROR;
