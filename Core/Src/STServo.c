@@ -14,9 +14,13 @@ extern osSemaphoreId_t motorTxSemHandle;
 extern osMessageQueueId_t motorRxQueueHandle;
 STServo_Handle_t hservo;
 // Servo feedback data
-STServo_Data_t servo_data[MAX_SERVO_ID + 1] = {0};
+STServo_Data_t servo_data[MAX_SERVO_ID] = {0};
 // Servo control table
-STServo_Control_t servo_control[MAX_SERVO_ID + 1] = {0};
+STServo_Control_t servo_control[MAX_SERVO_ID] = {0};
+
+
+/* Private defines ---------------------------------------------------------*/
+
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -378,17 +382,14 @@ void STServo_DeInit(STServo_Handle_t *handle)
 
 
 /**
- * @brief Write position command to servo
+ * @brief Ping servo to check if it's responding
  * @param handle Servo handle
- * @param id Servo ID (1-253)
- * @param position Target position (0-4095)
- * @param speed Movement speed (0-4095)
- * @param acceleration Acceleration (0-255)
- * @return STServo_Status_t
+ * @param id Servo ID
+ * @return true if servo responds, false otherwise
  */
 bool STServo_Ping(STServo_Handle_t *handle, uint8_t id)
 {
-  if (!handle || !handle->initialized) {
+  if (!handle || !handle->initialized || id > MAX_SERVO_ID) {
     last_error = STSERVO_ERROR_INVALID_PARAM;
     return false;
   }
@@ -428,10 +429,19 @@ bool STServo_Ping(STServo_Handle_t *handle, uint8_t id)
 }
 
 
+/**
+ * @brief Write position command to servo
+ * @param handle Servo handle
+ * @param id Servo ID (1-253)
+ * @param position Target position (0-4095)
+ * @param speed Movement speed (0-4095)
+ * @param acceleration Acceleration (0-255)
+ * @return STServo_Status_t
+ */
 STServo_Status_t STServo_WritePosition(STServo_Handle_t *handle, uint8_t id, int16_t position,
                                        uint16_t speed, uint16_t time, uint8_t acceleration)
 {
-  if (!handle || !handle->initialized) {
+  if (!handle || !handle->initialized || id > MAX_SERVO_ID) {
     last_error = STSERVO_ERROR_INVALID_PARAM;
     return SERVO_ERROR;
   }
@@ -522,7 +532,7 @@ STServo_Status_t STServo_SyncWritePosition(STServo_Handle_t *handle)
 
 
 /**
- * @brief Read current position from servo
+ * @brief Read current position (0-4095) from servo
  * @param handle Servo handle
  * @param id Servo ID
  * @note  data loaded to servo_data
@@ -530,7 +540,7 @@ STServo_Status_t STServo_SyncWritePosition(STServo_Handle_t *handle)
  */
 STServo_Status_t STServo_ReadPosition(STServo_Handle_t *handle, uint8_t id)
 {
-  if (!handle || !handle->initialized) {
+  if (!handle || !handle->initialized || id > MAX_SERVO_ID) {
     last_error = STSERVO_ERROR_INVALID_PARAM;
     return SERVO_ERROR;
   }
@@ -541,7 +551,7 @@ STServo_Status_t STServo_ReadPosition(STServo_Handle_t *handle, uint8_t id)
     return SERVO_ERROR;
   }
 
-  uint8_t response[ST_SERVO_RD_RSP_SIZE];
+  static uint8_t response[ST_SERVO_RD_RSP_SIZE];
   uint8_t response_length;
 
   if (!STServo_ReceivePacket(handle, response, &response_length)) {
@@ -590,23 +600,48 @@ int16_t STServo_ReadSpeed(STServo_Handle_t *handle, uint8_t id)
 
 
 /**
- * @brief Read current load from servo
+ * @brief Read current load (0.1% PWM duty cycle) from servo
  * @param handle Servo handle
  * @param id Servo ID
  * @return Current load or -1 on error
  */
-int16_t STServo_ReadLoad(STServo_Handle_t *handle, uint8_t id)
+STServo_Status_t STServo_ReadLoad(STServo_Handle_t *handle, uint8_t id)
 {
-  if (!handle || !handle->initialized) {
+  if (!handle || !handle->initialized || id > MAX_SERVO_ID) {
     last_error = STSERVO_ERROR_INVALID_PARAM;
-    return -1;
+    return SERVO_ERROR;
   }
 
-  uint8_t data[2];
-  if (STServo_ReadData(handle, id, SMS_STS_PRESENT_LOAD_L, data, 2)) {
-    return (int16_t)(data[0] | (data[1] << 8));
+  static const uint8_t params_length = 2;
+  if (!STServo_WriteData(handle, id, SMS_STS_PRESENT_LOAD_L, ST_INST_READ, &params_length, 1)) {
+    servo_data[id].sw_error_flags |= SERVO_RD_TX_FAILURE;
+    return SERVO_ERROR;
   }
-  return -1;
+
+  static uint8_t response[ST_SERVO_RD_RSP_SIZE];
+  uint8_t response_length;
+
+  if (!STServo_ReceivePacket(handle, response, &response_length)) {
+    servo_data[id].sw_error_flags |= SERVO_RD_RX_FAILURE;
+    return SERVO_ERROR;
+  }
+
+  // Check id
+  if (response[2] != id) {
+    servo_data[id].sw_error_flags |= SERVO_RD_RX_FAILURE;
+    return SERVO_ERROR;
+  }
+
+  // Load data and working condition
+  // Format : 0xFF, 0xFF, ID, LEN, Flags, data_L, data_H, CheckSum
+  servo_data[id].hw_error_flags = response[4];
+  servo_data[id].load = (response[5] + (response[6] << 8));
+  if (servo_data[id].hw_error_flags != 0) {
+    last_error = STSERVO_ERROR_HARDWARE;
+    return SERVO_ERROR;
+  }
+
+  return SERVO_OK;
 }
 
 
@@ -695,12 +730,6 @@ bool STServo_IsMoving(STServo_Handle_t *handle, uint8_t id)
 }
 
 
-/**
- * @brief Ping servo to check if it's responding
- * @param handle Servo handle
- * @param id Servo ID
- * @return true if servo responds, false otherwise
- */
 /**
  * @brief Get last error
  * @param handle Servo handle

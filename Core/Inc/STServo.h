@@ -91,9 +91,9 @@ extern "C" {
 #define ST_INST_SYNC_WRITE          0x83
 
 // Application constants
-#define MAX_SERVO_ID                20            // Max 30 for sync write command
+#define MAX_SERVO_ID                21            // Max 30 for sync write command
 #define RX_RING_BUFFER_SIZE         512           // Must be a power of 2
-#define SERVO_RX_TIMEOUT            1             // millisecond
+#define SERVO_RX_TIMEOUT            2             // millisecond
 
 /*--------------- hw_error_flags ---------------*/
 // Maps to the error flags received from the motor
@@ -187,11 +187,11 @@ typedef struct {
   uint8_t hw_error_flags;  // hardware error flags received from the servo
   uint8_t sw_error_flags;  // servo software error flags
   int16_t position;        // present raw position
-  int16_t speed;           // present raw speed
-  int16_t load;            // present raw load
-  uint8_t voltage;         // present voltage (0.1v)
+  int16_t speed;           // present raw speed (steps / second)
+  int16_t load;            // present load (0.1% PWM duty cycle)
+  uint8_t voltage;         // present voltage (0.1V)
   uint8_t temperature;     // C
-  int16_t current;         // present current (mA)
+  int16_t current;         // present current (6.5mA)
 } STServo_Data_t;
 
 // Servo control structure
@@ -234,7 +234,7 @@ STServo_Status_t STServo_SyncWritePosition(STServo_Handle_t *handle);
 // Feedback functions
 STServo_Status_t STServo_ReadPosition(STServo_Handle_t *handle, uint8_t id);
 int16_t STServo_ReadSpeed(STServo_Handle_t *handle, uint8_t id);
-int16_t STServo_ReadLoad(STServo_Handle_t *handle, uint8_t id);
+STServo_Status_t STServo_ReadLoad(STServo_Handle_t *handle, uint8_t id);
 int16_t STServo_ReadVoltage(STServo_Handle_t *handle, uint8_t id);
 int16_t STServo_ReadTemperature(STServo_Handle_t *handle, uint8_t id);
 int16_t STServo_ReadCurrent(STServo_Handle_t *handle, uint8_t id);
@@ -251,8 +251,8 @@ const char* STServo_GetErrorString(STServo_Error_t error);
 
 /* Public variables ---------------------------------------------------------*/
 extern STServo_Handle_t hservo;
-extern STServo_Data_t servo_data[MAX_SERVO_ID + 1];
-extern STServo_Control_t servo_control[MAX_SERVO_ID + 1];
+extern STServo_Data_t servo_data[MAX_SERVO_ID];
+extern STServo_Control_t servo_control[MAX_SERVO_ID];
 
 #ifdef __cplusplus
 }

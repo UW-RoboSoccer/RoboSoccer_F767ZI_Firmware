@@ -101,7 +101,6 @@ void HardFault_Handler(void)
   if (HFSR & SCB_HFSR_FORCED_Msk) {
     hardware_fault_flags |= FORCED_HARD_FAULT;
   }
-  RoboSoccer_errorHandler();
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
@@ -128,7 +127,6 @@ void MemManage_Handler(void)
   if (CFSR & SCB_CFSR_MMARVALID_Msk) {
     mem_access_error_addr = SCB->MMFAR;
   }
-  RoboSoccer_errorHandler();
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
   {
@@ -157,7 +155,6 @@ void BusFault_Handler(void)
   if (CFSR & SCB_CFSR_BFARVALID_Msk) {
     bus_error_addr = SCB->BFAR;
   }
-  RoboSoccer_errorHandler();
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
   {
@@ -192,7 +189,6 @@ void UsageFault_Handler(void)
   if (CFSR & SCB_CFSR_DIVBYZERO_Msk) {
     hardware_fault_flags |= DIVISION_BY_ZERO;
   }
-  RoboSoccer_errorHandler();
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
   {
@@ -261,6 +257,20 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 1 */
 
   /* USER CODE END USART3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line[15:10] interrupts.
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(USER_Btn_Pin);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
 }
 
 /**

@@ -25,10 +25,11 @@
 #include "imu_driver.h"
 #include "main.h"
 #include "tim.h"
+#include <stdbool.h>
 
 extern volatile uint8_t imu_hal_flags;
 extern volatile sh2_spi_s imu_spi;
-
+volatile bool btn_pressed = 0;
 /* USER CODE END 0 */
 
 /*----------------------------------------------------------------------------*/
@@ -115,6 +116,9 @@ void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI0_IRQn, 4, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 2 */
@@ -165,8 +169,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     imu_hal_flags |= IMU_INT_SERVICED;
     imu_hal_flags &= ~IMU_IN_RESET;
 
-    // Start SPI
+    // Start IMU SPI
     imu_spi_activate();
+  }
+
+  if (GPIO_Pin == USER_Btn_Pin) {
+    btn_pressed = 1;
   }
 
 }
