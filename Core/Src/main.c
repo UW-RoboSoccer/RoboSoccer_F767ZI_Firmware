@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-#include "adc.h"
 #include "dma.h"
 #include "usart.h"
 #include "gpio.h"
@@ -27,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "imu_driver.h"
+#include "usb_device.h"
 #include "error.h"
 #include <stdio.h>
 #include "iwdg.h"
@@ -34,6 +34,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
 // @brief  Possible STM32 system reset causes
 typedef enum reset_cause_e
 {
@@ -112,14 +113,14 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  // Implement eeprom recovery later
+  sys_error_flags = 0;
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_USART3_UART_Init();
-  MX_ADC1_Init();
   MX_USART1_UART_Init();
   MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
@@ -129,28 +130,8 @@ int main(void)
   printf("Start osKernel Init \n\r");
 
   // IWDG disabled for debugging
-  //MX_IWDG_Init();
-//  uint32_t  raw_ch1;
-//  while (1) {
-//
-//    /* 1. Make sure the ADC is not already in DMA mode */
-//    HAL_ADC_Stop_DMA(&hadc1);          /* harmless if DMA wasn’t running   */
-//    ADC_ChannelConfTypeDef sConfig = {0};
-//    sConfig.Channel = ADC_CHANNEL_6;
-//    sConfig.Rank = 1;
-//    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-//     {
-//       Error_Handler();
-//     }
-//    HAL_ADC_Start(&hadc2);
-//    HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
-//    raw_ch1 = HAL_ADC_GetValue(&hadc2);   /* Rank-1 (Channel 1) */
-//
-//    printf("ch6 Reading: %ld \r\n", raw_ch1);
-//
-//    HAL_ADC_Stop(&hadc1);                 /* release the peripheral */
-//    HAL_Delay(500);
-//  }
+//  MX_IWDG_Init();
+//  MX_USB_DEVICE_Init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

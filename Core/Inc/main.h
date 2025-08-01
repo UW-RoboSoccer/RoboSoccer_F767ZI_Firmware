@@ -105,7 +105,8 @@ void Error_Handler(void);
 #define SPI_IMU_INT_EXTI_IRQn EXTI0_IRQn
 
 /* USER CODE BEGIN Private defines */
-#define PRINTF_TX_BUFFER_SIZE       512
+#define PRINTF_TX_BUFFER_SIZE     512
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

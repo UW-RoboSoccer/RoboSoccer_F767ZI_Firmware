@@ -30,6 +30,7 @@
 extern volatile uint8_t imu_hal_flags;
 extern volatile sh2_spi_s imu_spi;
 volatile bool btn_pressed = 0;
+volatile uint32_t last_btn_press_time = 0;
 /* USER CODE END 0 */
 
 /*----------------------------------------------------------------------------*/
@@ -113,7 +114,7 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(SPI_IMU_INT_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 4, 0);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
@@ -174,7 +175,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 
   if (GPIO_Pin == USER_Btn_Pin) {
-    btn_pressed = 1;
+    uint32_t now = HAL_GetTick();
+    // Register button press with debounce
+    if (now - last_btn_press_time > BUTTON_DEBOUNCE_DELAY_MS) {
+      last_btn_press_time = now;
+      btn_pressed = 1;
+    }
   }
 
 }

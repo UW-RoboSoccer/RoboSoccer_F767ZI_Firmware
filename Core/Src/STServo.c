@@ -1,12 +1,110 @@
 /**
- * @file STServo.c
- * @brief ST Series Serial Servo Control Implementation
- * @author Adapted for STM32F707ZI and FreeRTOS
- * @date 2025
- */
-
+  ******************************************************************************
+  * @file   STServo.c
+  * @brief  This file provides driver code for the ST Series Serial Servos
+  * @date   2025
+  ******************************************************************************
+  *
+  */
 #include "STServo.h"
 #include <string.h>
+
+
+/* Private defines ---------------------------------------------------------*/
+#define RX_RING_MSK                 (RX_RING_BUFFER_SIZE - 1)
+
+// Push one byte into rx->buffer, advance tail with wrap
+#define RING_PUSH(rxCtx_, byte_)                         \
+  do {                                               \
+    (rxCtx_)->buffer[(rxCtx_)->tail] = (byte_);             \
+    (rxCtx_)->tail = ((rxCtx_)->tail + 1) & RX_RING_MSK;   \
+  } while (0)
+
+// pop one byte from rx->buffer, advance head with wrap
+#define RING_POP(rxCtx_, byte_)                          \
+  do {                                               \
+    (byte_) = (rxCtx_)->buffer[(rxCtx_)->head];             \
+    (rxCtx_)->head = ((rxCtx_)->head + 1) & RX_RING_MSK;   \
+  } while (0)
+
+// Set software error flag to every online servo
+#define SERVO_SET_ERROR_ALL_ONLINE(flag_)                      \
+  do {                                                       \
+    for (uint8_t _id = 0; _id <= MAX_SERVO_ID; ++_id) {        \
+      if (servo_data[_id].status_flags & MOTOR_IS_ONLINE)      \
+        servo_data[_id].sw_error_flags |= (flag_);         \
+    }                                                          \
+  } while (0)
+
+// Baud rate definitions
+#define SMS_STS_1M                  0U
+#define SMS_STS_0_5M                1U
+#define SMS_STS_250K                2U
+#define SMS_STS_128K                3U
+#define SMS_STS_115200              4U
+#define SMS_STS_76800               5U
+#define SMS_STS_57600               6U
+#define SMS_STS_38400               7U
+
+// Memory table definitions
+// -------EPROM(Read Only)--------
+#define SMS_STS_MODEL_L             3U
+#define SMS_STS_MODEL_H             4U
+
+// -------EPROM(Read/Write)--------
+#define SMS_STS_ID                  5U
+#define SMS_STS_BAUD_RATE           6U
+#define SMS_STS_MIN_ANGLE_LIMIT_L   9U
+#define SMS_STS_MIN_ANGLE_LIMIT_H   10U
+#define SMS_STS_MAX_ANGLE_LIMIT_L   11U
+#define SMS_STS_MAX_ANGLE_LIMIT_H   12U
+#define SMS_STS_CW_DEAD             26U
+#define SMS_STS_CCW_DEAD            27U
+#define SMS_STS_OFS_L               31U
+#define SMS_STS_OFS_H               32U
+#define SMS_STS_MODE                33U
+
+// -------SRAM(Read/Write)--------
+#define SMS_STS_TORQUE_ENABLE       40U
+#define SMS_STS_ACC                 41U
+#define SMS_STS_GOAL_POSITION_L     42U
+#define SMS_STS_GOAL_POSITION_H     43U
+#define SMS_STS_GOAL_TIME_L         44U
+#define SMS_STS_GOAL_TIME_H         45U
+#define SMS_STS_GOAL_SPEED_L        46U
+#define SMS_STS_GOAL_SPEED_H        47U
+#define SMS_STS_LOCK                55U
+
+// -------SRAM(Read Only)--------
+#define SMS_STS_PRESENT_POSITION_L  56U
+#define SMS_STS_PRESENT_POSITION_H  57U
+#define SMS_STS_PRESENT_SPEED_L     58U
+#define SMS_STS_PRESENT_SPEED_H     59U
+#define SMS_STS_PRESENT_LOAD_L      60U
+#define SMS_STS_PRESENT_LOAD_H      61U
+#define SMS_STS_PRESENT_VOLTAGE     62U
+#define SMS_STS_PRESENT_TEMPERATURE 63U
+#define SMS_STS_MOVING              66U
+#define SMS_STS_PRESENT_CURRENT_L   69U
+#define SMS_STS_PRESENT_CURRENT_H   70U
+
+// Instruction set
+#define ST_INST_PING                0x01U
+#define ST_INST_READ                0x02U
+#define ST_INST_WRITE               0x03U
+#define ST_INST_REG_WRITE           0x04U
+#define ST_INST_ACTION              0x05U
+#define ST_INST_SYNC_READ           0x82U
+#define ST_INST_SYNC_WRITE          0x83U
+
+// Protocol constants
+#define ST_SERVO_FRAME_HEADER       0xFFU
+#define ST_SERVO_FRAME_HEADER2      0xFFU
+#define ST_SERVO_BROADCAST_ID       0xFEU
+#define ST_SERVO_DEFAULT_RSP_SIZE   6U
+#define ST_SERVO_RD_RSP_SIZE        8U
+#define ST_SERVO_SYNC_RD_RSP_SIZE   22U
+
 
 /* Private variables ---------------------------------------------------------*/
 static STServo_Error_t last_error = STSERVO_OK;
@@ -19,10 +117,6 @@ STServo_Data_t servo_data[MAX_SERVO_ID] = {0};
 STServo_Control_t servo_control[MAX_SERVO_ID] = {0};
 
 
-/* Private defines ---------------------------------------------------------*/
-
-
-
 /* Private function prototypes -----------------------------------------------*/
 static bool STServo_SendPacket(STServo_Handle_t *handle, const uint8_t *packet, uint8_t length);
 static bool STServo_ReceivePacket(STServo_Handle_t *handle, uint8_t *packet, uint8_t *length);
@@ -33,6 +127,45 @@ static uint8_t STServo_CalculateChecksum(const uint8_t *packet, uint8_t length);
 static bool STServo_ValidateChecksum(const uint8_t *packet, uint8_t length);
 static uint8_t STServo_BuildPacket(STServo_Packet_t *packet, uint8_t id, uint8_t instruction,
                                    const uint8_t *parameters, uint8_t param_length);
+
+
+/* Function definitions -------------------------------------------------------*/
+/**
+ * @brief Initialize the ST Servo handle
+ * @param handle Pointer to servo handle
+ * @param huart Pointer to UART handle
+ * @return true if successful, false otherwise
+ */
+bool STServo_Init(STServo_Handle_t *handle, UART_HandleTypeDef *huart)
+{
+  if (!handle || !huart) {
+    last_error = STSERVO_ERROR_INVALID_PARAM;
+    return false;
+  }
+
+  handle->huart = huart;
+  handle->txDone = motorTxSemHandle;
+  handle->rxQueue = motorRxQueueHandle;
+
+  if (handle->txDone == NULL || handle->rxQueue == NULL) {
+    last_error = STSERVO_ERROR_INVALID_PARAM;
+    return false;
+  }
+
+  handle->timeout_ms = SERVO_RX_TIMEOUT;
+  memset(&handle->rxCtx, 0, sizeof(handle->rxCtx));
+
+
+
+  // Enable uart receive ISR
+  if (HAL_UART_Receive_IT(handle->huart, &handle->rxCtx.byte, 1) != HAL_OK) {
+    last_error = STSERVO_ERROR_COMM_FAILED;
+    return false;
+  }
+  last_error = STSERVO_OK;
+  handle->initialized = true;
+  return true;
+}
 
 
 /**
@@ -49,10 +182,10 @@ static bool STServo_SendPacket(STServo_Handle_t *handle, const uint8_t *packet, 
     return false;
   }
 
-  uint8_t dbg_pkt[7];
-  for (uint8_t i = 0; i < 7; i++) {
-    dbg_pkt[i] = packet[i];
-  }
+//  uint8_t dbg_pkt[7];
+//  for (uint8_t i = 0; i < 7; i++) {
+//    dbg_pkt[i] = packet[i];
+//  }
 
   HAL_StatusTypeDef status = HAL_UART_Transmit_IT(handle->huart, (uint8_t*)packet, length);
   if (status != HAL_OK) {
@@ -91,11 +224,11 @@ static bool STServo_ReceivePacket(STServo_Handle_t *handle, uint8_t *packet, uin
   }
 
   // Message arrived
-  uint8_t debug_pkt[msg_len];
+  //uint8_t debug_pkt[msg_len];
   // Write caller buffer
   for (uint8_t i = 0; i < msg_len; i++) {
-    RING_POP(&handle->hrx, packet[i]);
-    debug_pkt[i] = packet[i];
+    RING_POP(&handle->rxCtx, packet[i]);
+    //debug_pkt[i] = packet[i];
   }
   // Write caller length
   *length = msg_len;
@@ -269,7 +402,7 @@ static uint8_t STServo_BuildPacket(STServo_Packet_t *packet, uint8_t id, uint8_t
  */
 void STServo_ReadFromISR(STServo_Handle_t *handle)
 {
-  STServo_RxHandle_t *rx = &handle->hrx;
+  STServo_RxCtx_t *rx = &handle->rxCtx;
 
   // Build 4-byte message info
   if (rx->info_index < 4) {
@@ -331,41 +464,6 @@ void STServo_ReadFromISR(STServo_Handle_t *handle)
   HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
 }
 
-
-/**
- * @brief Initialize the ST Servo handle
- * @param handle Pointer to servo handle
- * @param huart Pointer to UART handle
- * @return true if successful, false otherwise
- */
-bool STServo_Init(STServo_Handle_t *handle, UART_HandleTypeDef *huart)
-{
-  if (!handle || !huart) {
-    last_error = STSERVO_ERROR_INVALID_PARAM;
-    return false;
-  }
-
-  handle->huart = huart;
-  handle->txDone = motorTxSemHandle;
-  handle->rxQueue = motorRxQueueHandle;
-
-  if (handle->txDone == NULL || handle->rxQueue == NULL) {
-    last_error = STSERVO_ERROR_INVALID_PARAM;
-    return false;
-  }
-
-  handle->timeout_ms = SERVO_RX_TIMEOUT;
-  memset(&handle->hrx, 0, sizeof(handle->hrx));
-  // Enable uart receive ISR
-  if (HAL_UART_Receive_IT(handle->huart, &handle->hrx.byte, 1) != HAL_OK) {
-    last_error = STSERVO_ERROR_COMM_FAILED;
-    return false;
-  }
-
-  last_error = STSERVO_OK;
-  handle->initialized = true;
-  return true;
-}
 
 
 /**
@@ -506,7 +604,7 @@ STServo_Status_t STServo_SyncWritePosition(STServo_Handle_t *handle)
 
   // Write parameters
   params[index++] = 0x07;       // Bytes per servo, exclude id
-  for (uint8_t id = 0; id <= MAX_SERVO_ID; id++) {
+  for (uint8_t id = 0; id < MAX_SERVO_ID; id++) {
     // Skip if current servo is not online
     if (!(servo_data[id].status_flags & MOTOR_IS_ONLINE)) continue;
 
@@ -523,7 +621,7 @@ STServo_Status_t STServo_SyncWritePosition(STServo_Handle_t *handle)
   }
 
   if (!STServo_WriteData(handle, ST_SERVO_BROADCAST_ID, SMS_STS_ACC, ST_INST_SYNC_WRITE, params, index)) {
-    SERVO_SET_ERROR_ALL_ONLINE(SERVO_SYNC_TX_OVERFLOW);
+    SERVO_SET_ERROR_ALL_ONLINE(SERVO_RD_TX_FAILURE);
     return SERVO_ERROR;
   }
 
@@ -535,7 +633,7 @@ STServo_Status_t STServo_SyncWritePosition(STServo_Handle_t *handle)
  * @brief Read current position (0-4095) from servo
  * @param handle Servo handle
  * @param id Servo ID
- * @note  data loaded to servo_data
+ * @note  This fn load data to servo_data
  * @return STServo_Status_t
  */
 STServo_Status_t STServo_ReadPosition(STServo_Handle_t *handle, uint8_t id)
@@ -603,42 +701,118 @@ int16_t STServo_ReadSpeed(STServo_Handle_t *handle, uint8_t id)
  * @brief Read current load (0.1% PWM duty cycle) from servo
  * @param handle Servo handle
  * @param id Servo ID
- * @return Current load or -1 on error
+ * @note  This fn load data to servo_data
+ * @return STServo_Status_t
  */
-STServo_Status_t STServo_ReadLoad(STServo_Handle_t *handle, uint8_t id)
+//STServo_Status_t STServo_ReadLoad(STServo_Handle_t *handle, uint8_t id)
+//{
+//  if (!handle || !handle->initialized || id > MAX_SERVO_ID) {
+//    last_error = STSERVO_ERROR_INVALID_PARAM;
+//    return SERVO_ERROR;
+//  }
+//
+//  static const uint8_t params_length = 2;
+//  if (!STServo_WriteData(handle, id, SMS_STS_PRESENT_LOAD_L, ST_INST_READ, &params_length, 1)) {
+//    servo_data[id].sw_error_flags |= SERVO_RD_TX_FAILURE;
+//    return SERVO_ERROR;
+//  }
+//
+//  static uint8_t response[ST_SERVO_RD_RSP_SIZE];
+//  uint8_t response_length;
+//
+//  if (!STServo_ReceivePacket(handle, response, &response_length)) {
+//    servo_data[id].sw_error_flags |= SERVO_RD_RX_FAILURE;
+//    return SERVO_ERROR;
+//  }
+//
+//  // Check id
+//  if (response[2] != id) {
+//    servo_data[id].sw_error_flags |= SERVO_RD_RX_FAILURE;
+//    return SERVO_ERROR;
+//  }
+//
+//  // Load data and working condition
+//  // Format : 0xFF, 0xFF, ID, LEN, Flags, data_L, data_H, CheckSum
+//  servo_data[id].hw_error_flags = response[4];
+//  servo_data[id].load = (response[5] + (response[6] << 8));
+//  if (servo_data[id].hw_error_flags != 0) {
+//    last_error = STSERVO_ERROR_HARDWARE;
+//    return SERVO_ERROR;
+//  }
+//
+//  return SERVO_OK;
+//}
+
+
+/**
+ * @brief Sync read servo feedback (position, speed, load, voltage, temperature, current)
+ * @param handle Servo handle
+ * @note  This fn load data to servo_data
+ * @return STServo_Status_t
+ */
+STServo_Status_t STServo_SyncRead(STServo_Handle_t *handle)
 {
-  if (!handle || !handle->initialized || id > MAX_SERVO_ID) {
+  if (!handle || !handle->initialized) {
     last_error = STSERVO_ERROR_INVALID_PARAM;
     return SERVO_ERROR;
   }
 
-  static const uint8_t params_length = 2;
-  if (!STServo_WriteData(handle, id, SMS_STS_PRESENT_LOAD_L, ST_INST_READ, &params_length, 1)) {
-    servo_data[id].sw_error_flags |= SERVO_RD_TX_FAILURE;
+  // buffer to store parameters and track its index
+  uint8_t params[ST_SERVO_MAX_BUFFER_SIZE - 5];
+  uint8_t index = 0;
+
+  // Write parameters
+  params[index++] = SMS_STS_PRESENT_POSITION_H - SMS_STS_PRESENT_POSITION_L + 1;  // Data length
+  for (uint8_t id = 0; id < MAX_SERVO_ID; id++) {
+    // Skip if current servo is not online
+    if (!(servo_data[id].status_flags & MOTOR_IS_ONLINE)) continue;
+    params[index++] = id;                                                        // Servo id
+  }
+
+  if (!STServo_WriteData(handle, ST_SERVO_BROADCAST_ID, SMS_STS_PRESENT_POSITION_L,
+                         ST_INST_SYNC_READ, params, index)) {
+    SERVO_SET_ERROR_ALL_ONLINE(SERVO_SYNC_TX_FAILURE);
     return SERVO_ERROR;
   }
 
-  static uint8_t response[ST_SERVO_RD_RSP_SIZE];
-  uint8_t response_length;
+  /* Handle data feedback
+   * Format: 0xFF, 0xFF, LEN, WorkCondi, Position_L, Position_H, Speed_L, Speed_H, Load_L, Load_H,
+             Voltage, Temperature, DNC, DNC, movement flag, DNC, DNC, Current_L, Current_H, Checksum
+  */
+  for (uint8_t id = 0; id < MAX_SERVO_ID; id++) {
+    // Skip if current servo is not online
+    if (!(servo_data[id].status_flags & MOTOR_IS_ONLINE)) continue;
 
-  if (!STServo_ReceivePacket(handle, response, &response_length)) {
-    servo_data[id].sw_error_flags |= SERVO_RD_RX_FAILURE;
-    return SERVO_ERROR;
-  }
+    uint8_t response[ST_SERVO_SYNC_RD_RSP_SIZE];
+    uint8_t response_length;
 
-  // Check id
-  if (response[2] != id) {
-    servo_data[id].sw_error_flags |= SERVO_RD_RX_FAILURE;
-    return SERVO_ERROR;
-  }
+    if (!STServo_ReceivePacket(handle, response, &response_length)) {
+      servo_data[id].sw_error_flags |= SERVO_SYNC_RX_FAILURE;
+      return SERVO_ERROR;
+    }
 
-  // Load data and working condition
-  // Format : 0xFF, 0xFF, ID, LEN, Flags, data_L, data_H, CheckSum
-  servo_data[id].hw_error_flags = response[4];
-  servo_data[id].load = (response[5] + (response[6] << 8));
-  if (servo_data[id].hw_error_flags != 0) {
-    last_error = STSERVO_ERROR_HARDWARE;
-    return SERVO_ERROR;
+    // Check id
+    if (response[2] != id) {
+      servo_data[id].sw_error_flags |= SERVO_SYNC_RX_FAILURE;
+      return SERVO_ERROR;
+    }
+
+    // Load working condition
+    servo_data[id].hw_error_flags = response[4];
+    if (servo_data[id].hw_error_flags != 0) {
+      last_error = STSERVO_ERROR_HARDWARE;
+      return SERVO_ERROR;
+    }
+
+    // Load data feedback
+    servo_data[id].position = (response[5] + (response[6] << 8));
+//    servo_data[id].speed = (response[7] + (response[8] << 8));
+//    servo_data[id].load = (response[9] + (response[10] << 8));
+//    servo_data[id].voltage = response[11];
+//    servo_data[id].temperature = response[12];
+//    servo_data[id].status_flags = response[15] ? (servo_data[id].status_flags | MOTOR_IS_MOVING)
+//                                               : (servo_data[id].status_flags & ~MOTOR_IS_MOVING);
+//    servo_data[id].current = (response[18] + (response[19] << 8));
   }
 
   return SERVO_OK;

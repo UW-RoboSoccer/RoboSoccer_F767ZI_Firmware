@@ -39,13 +39,13 @@ extern UART_HandleTypeDef huart2;
 static sh2_Hal_t imu_hal;
 
 volatile sh2_spi_s imu_spi = {
-    .RxBuffer = {0},
-    .Dummy_TxBuffer = {0},
-    .TxBuffer = {0},
-    .RxBuffer_Len = 0,
-    .TxBuffer_Len = 0,
-    .rx_timestamp = 0,
-    .state = SPI_INIT
+  .RxBuffer = {0},
+  .Dummy_TxBuffer = {0},
+  .TxBuffer = {0},
+  .RxBuffer_Len = 0,
+  .TxBuffer_Len = 0,
+  .rx_timestamp = 0,
+  .state = SPI_INIT
 };
 
 volatile uint8_t imu_hal_flags = 0;
@@ -575,14 +575,14 @@ static void sh2_eventHanlder(void *cookie, sh2_AsyncEvent_t *pEvt)
     case SH2_SHTP_EVENT: {
       // create an array of 8 pointers to event names
       static const char *const shtp_event_name[] = {
-          "TX_DISCARD",
-          "SHORT_FRAGMENT",
-          "TOO_LARGE_PAYLOADS",
-          "BAD_RX_CHAN",
-          "BAD_TX_CHAN",
-          "BAD_FRAGMENT",
-          "BAD_SN",
-          "INTERRUPTED_PAYLOAD"
+        "TX_DISCARD",
+        "SHORT_FRAGMENT",
+        "TOO_LARGE_PAYLOADS",
+        "BAD_RX_CHAN",
+        "BAD_TX_CHAN",
+        "BAD_FRAGMENT",
+        "BAD_SN",
+        "INTERRUPTED_PAYLOAD"
       };
       uint8_t arr_max =  sizeof(shtp_event_name) / sizeof(shtp_event_name[1]);
       if (pEvt->shtpEvent < arr_max) {

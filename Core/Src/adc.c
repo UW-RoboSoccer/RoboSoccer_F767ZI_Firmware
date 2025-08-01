@@ -24,7 +24,7 @@
 #include "cmsis_os.h"
 
 
-extern osSemaphoreId_t adcSemHandle;
+extern osSemaphoreId_t adc1SemHandle;
 /* USER CODE END 0 */
 
 ADC_HandleTypeDef hadc1;
@@ -48,7 +48,7 @@ void MX_ADC1_Init(void)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV6;
-  hadc1.Init.Resolution = ADC_RESOLUTION_8B;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
@@ -86,7 +86,7 @@ void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
   sConfig.Rank = ADC_REGULAR_RANK_3;
-  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_144CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -181,8 +181,8 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 /* USER CODE BEGIN 1 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-  if (hadc->Instance == ADC1 && adcSemHandle != NULL) {
-    osSemaphoreRelease(adcSemHandle);
+  if (hadc->Instance == ADC1 && adc1SemHandle != NULL) {
+    osSemaphoreRelease(adc1SemHandle);
   }
 }
 /* USER CODE END 1 */

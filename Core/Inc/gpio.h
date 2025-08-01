@@ -33,7 +33,7 @@ extern "C" {
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
-
+#define BUTTON_DEBOUNCE_DELAY_MS    200
 /* USER CODE END Private defines */
 
 void MX_GPIO_Init(void);

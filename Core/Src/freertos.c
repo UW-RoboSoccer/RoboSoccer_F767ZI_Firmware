@@ -51,12 +51,9 @@ typedef StaticTask_t osStaticThreadDef_t;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-extern uint16_t filtered_adc1_buffer[ADC1_CHANNEL_COUNT];
-extern volatile uint32_t imu_error_flags;
 extern UART_HandleTypeDef huart1;
 extern volatile bool btn_pressed;
 /* USER CODE END Variables */
-
 /* Definitions for AnalogTask */
 osThreadId_t AnalogTaskHandle;
 uint32_t AnalogTaskBuffer[ 1024 ];
@@ -83,7 +80,7 @@ const osThreadAttr_t GeneralTask0_attributes = {
 };
 /* Definitions for ImuTask */
 osThreadId_t ImuTaskHandle;
-uint32_t ImuTaskBuffer[ 1024 ];
+uint32_t ImuTaskBuffer[ 2048 ];
 osStaticThreadDef_t ImuTaskControlBlock;
 const osThreadAttr_t ImuTask_attributes = {
   .name = "ImuTask",
@@ -91,7 +88,7 @@ const osThreadAttr_t ImuTask_attributes = {
   .cb_size = sizeof(ImuTaskControlBlock),
   .stack_mem = &ImuTaskBuffer[0],
   .stack_size = sizeof(ImuTaskBuffer),
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityRealtime,
 };
 /* Definitions for MotorTask */
 osThreadId_t MotorTaskHandle;
@@ -110,10 +107,10 @@ osMessageQueueId_t motorRxQueueHandle;
 const osMessageQueueAttr_t motorRxQueue_attributes = {
   .name = "motorRxQueue"
 };
-/* Definitions for adcSem */
-osSemaphoreId_t adcSemHandle;
-const osSemaphoreAttr_t adcSem_attributes = {
-  .name = "adcSem"
+/* Definitions for adc1Sem */
+osSemaphoreId_t adc1SemHandle;
+const osSemaphoreAttr_t adc1Sem_attributes = {
+  .name = "adc1Sem"
 };
 /* Definitions for motorTxSem */
 osSemaphoreId_t motorTxSemHandle;
@@ -189,15 +186,15 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* creation of adcSem */
-  adcSemHandle = osSemaphoreNew(1, 0, &adcSem_attributes);
+  /* creation of adc1Sem */
+  adc1SemHandle = osSemaphoreNew(1, 0, &adc1Sem_attributes);
 
   /* creation of motorTxSem */
   motorTxSemHandle = osSemaphoreNew(1, 0, &motorTxSem_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
-  (void)osSemaphoreAcquire(adcSemHandle, 0);
+  (void)osSemaphoreAcquire(adc1SemHandle, 0);
   (void)osSemaphoreAcquire(motorTxSemHandle, 0);
   /* USER CODE END RTOS_SEMAPHORES */
 
@@ -251,16 +248,20 @@ void StartAnalogTask(void *argument)
 {
   /* USER CODE BEGIN StartAnalogTask */
   (void)argument;
-  // Give the first second to imu task
   TickType_t xWakeTime = xTaskGetTickCount();
+  ADC1_Init();
   printf("Running AnalogTask 1ms loop \n\r");
   /* Infinite loop */
   for(;;)
   {
-    if (ADC1_ReadAverage(ADC1_FILTER_SIZE, FSR_ADC_TIMEOUT) != ADC_OK)  {
+    // Read from adc1
+    if (ADC_ReadAverage(&adc1_avg_ctx, ADC1_FILTER_SIZE, ADC_TIMEOUT) != ADC_OK)  {
       RoboSoccer_errorHandler();
     }
-    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(1));
+    // Read Vref
+    VDDA_mv = ADC_ReadVdda();
+    MCU_TEMP_c = ADC_ReadTempSensor(VDDA_mv);
+    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(2));
   }
   /* USER CODE END StartAnalogTask */
 }
@@ -281,11 +282,13 @@ void StartGeneralTask0(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    if (filtered_adc1_buffer[0] > 150) {
+    if (adc1_filtered_buffer[0] > 1500) {
       LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin;
     } else {
       LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin << 16;
     }
+
+    //printf("imu_timestamp: %ld ", imu_spi.rx_timestamp);
     //printf("adc1[0] Reading: %d \r\n", filtered_adc1_buffer[0]);
     //printf("adc1[1] Reading: %d \r\n", filtered_adc1_buffer[1]);
     vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(100));
@@ -338,16 +341,12 @@ void StartMotorTask(void *argument)
     printf("Motor Init Success \n\r");
   }
 
-  if (!STServo_Ping(&hservo, 2)) {
-    printf("Motor 2 NOT Found \n\r");
-  } else {
-    printf("Motor 2 Connected \n\r");
-  }
-
-  if (!STServo_Ping(&hservo, 4)) {
-    printf("Motor 4 NOT Found \n\r");
-  } else {
-    printf("Motor 4 Connected \n\r");
+  for (uint8_t id = 0; id < MAX_SERVO_ID; id++) {
+    if (!STServo_Ping(&hservo, id)) {
+      printf("Motor %d NOT Found \n\r" , id);
+    } else {
+      printf("Motor %d Connected \n\r", id);
+    }
   }
 
   const int16_t position[5] = {0, 1024, 2048, 3072, 4095};
@@ -371,6 +370,23 @@ void StartMotorTask(void *argument)
       servo_control[4].goal_speed = speed;
       servo_control[4].goal_time = time;
 
+      servo_control[8].goal_acc = acc;
+      servo_control[8].goal_position = position[4 - step];
+      servo_control[8].goal_speed = speed;
+      servo_control[8].goal_time = time;
+
+
+      servo_control[15].goal_acc = acc;
+      servo_control[15].goal_position = position[step];
+      servo_control[15].goal_speed = speed;
+      servo_control[15].goal_time = time;
+
+
+      servo_control[17].goal_acc = acc;
+      servo_control[17].goal_position = position[4 - step];
+      servo_control[17].goal_speed = speed;
+      servo_control[17].goal_time = time;
+
       if (STServo_SyncWritePosition(&hservo) != SERVO_OK) {
         STServo_Error_t err = STServo_GetLastError(&hservo);
         printf("Servo %u error: %s\n\r", 0xFE, STServo_GetErrorString(err));
@@ -379,23 +395,16 @@ void StartMotorTask(void *argument)
       step = (step + 1) % 5;
     }
 
-    if (STServo_ReadPosition(&hservo, 2) != SERVO_OK) {
-      STServo_Error_t err = STServo_GetLastError(&hservo);
-      printf("Servo %u error: %s\n\r", 2, STServo_GetErrorString(err));
-    }
-    if (STServo_ReadPosition(&hservo, 4) != SERVO_OK) {
-      STServo_Error_t err = STServo_GetLastError(&hservo);
-      printf("Servo %u error: %s\n\r", 4, STServo_GetErrorString(err));
-    }
-    if (STServo_ReadLoad(&hservo, 2) != SERVO_OK) {
-      STServo_Error_t err = STServo_GetLastError(&hservo);
-      printf("Servo %u error: %s\n\r", 2, STServo_GetErrorString(err));
-    }
-    if (STServo_ReadLoad(&hservo, 4) != SERVO_OK) {
-      STServo_Error_t err = STServo_GetLastError(&hservo);
-      printf("Servo %u error: %s\n\r", 4, STServo_GetErrorString(err));
-    }
-    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(2));
+    STServo_ReadPosition(&hservo, 2);
+    STServo_ReadPosition(&hservo, 4);
+    STServo_ReadPosition(&hservo, 8);
+    STServo_ReadPosition(&hservo, 15);
+    STServo_ReadPosition(&hservo, 17);
+//    if (STServo_SyncRead(&hservo) != SERVO_OK) {
+//      STServo_Error_t err = STServo_GetLastError(&hservo);
+//      printf("Servo %u error: %s\n\r", 0xFE, STServo_GetErrorString(err));
+//    }
+    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(10));
   }
   /* USER CODE END StartMotorTask */
 }

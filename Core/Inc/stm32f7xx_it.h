@@ -42,7 +42,7 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-/*----------- hardware_fault_flags -------------*/
+/*------------- hard_fault_flags ---------------*/
 #define   VECTOR_TABLE_READ_FAULT         0x0001U
 #define   FORCED_HARD_FAULT               0x0002U
 #define   INSTRUCTION_ACCESS_VIOLATION    0x0004U
@@ -75,6 +75,8 @@ void EXTI15_10_IRQHandler(void);
 void SPI3_IRQHandler(void);
 void TIM6_DAC_IRQHandler(void);
 void DMA2_Stream0_IRQHandler(void);
+void OTG_HS_EP1_OUT_IRQHandler(void);
+void OTG_HS_EP1_IN_IRQHandler(void);
 void OTG_HS_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 

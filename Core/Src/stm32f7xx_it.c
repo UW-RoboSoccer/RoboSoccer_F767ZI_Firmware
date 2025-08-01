@@ -42,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-volatile uint16_t hardware_fault_flags = 0;
+volatile uint16_t hard_fault_flags = 0;
 volatile uint32_t bus_error_addr = 0xFFFFFFFF;
 volatile uint32_t mem_access_error_addr = 0xFFFFFFFF;
 /* USER CODE END PV */
@@ -96,10 +96,10 @@ void HardFault_Handler(void)
   uint32_t HFSR = SCB->HFSR;
 
   if (HFSR & SCB_HFSR_VECTTBL_Msk) {
-    hardware_fault_flags |= VECTOR_TABLE_READ_FAULT;
+    hard_fault_flags |= VECTOR_TABLE_READ_FAULT;
   }
   if (HFSR & SCB_HFSR_FORCED_Msk) {
-    hardware_fault_flags |= FORCED_HARD_FAULT;
+    hard_fault_flags |= FORCED_HARD_FAULT;
   }
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
@@ -119,10 +119,10 @@ void MemManage_Handler(void)
   uint32_t CFSR = SCB->CFSR;
 
   if (MMFSR & SCB_CFSR_IACCVIOL_Msk) {
-    hardware_fault_flags |= INSTRUCTION_ACCESS_VIOLATION;
+    hard_fault_flags |= INSTRUCTION_ACCESS_VIOLATION;
   }
   if (MMFSR & SCB_CFSR_DACCVIOL_Msk) {
-    hardware_fault_flags |= DATA_ACCESS_VIOLATION;
+    hard_fault_flags |= DATA_ACCESS_VIOLATION;
   }
   if (CFSR & SCB_CFSR_MMARVALID_Msk) {
     mem_access_error_addr = SCB->MMFAR;
@@ -144,13 +144,13 @@ void BusFault_Handler(void)
   uint32_t CFSR = SCB->CFSR;
 
   if (CFSR & SCB_CFSR_IBUSERR_Msk) {
-    hardware_fault_flags |= INSTRUCTION_BUS_ERROR;
+    hard_fault_flags |= INSTRUCTION_BUS_ERROR;
   }
   if (CFSR & SCB_CFSR_PRECISERR_Msk) {
-    hardware_fault_flags |= PRECISE_DATA_BUS_ERROR;
+    hard_fault_flags |= PRECISE_DATA_BUS_ERROR;
   }
   if (CFSR & SCB_CFSR_IMPRECISERR_Msk) {
-    hardware_fault_flags |= IMPRECISE_DATA_BUS_ERROR;
+    hard_fault_flags |= IMPRECISE_DATA_BUS_ERROR;
   }
   if (CFSR & SCB_CFSR_BFARVALID_Msk) {
     bus_error_addr = SCB->BFAR;
@@ -172,22 +172,22 @@ void UsageFault_Handler(void)
   uint32_t CFSR = SCB->CFSR;
 
   if (CFSR & SCB_CFSR_UNDEFINSTR_Msk) {
-    hardware_fault_flags |= UNDEFINED_INSTRUCTION_ERROR;
+    hard_fault_flags |= UNDEFINED_INSTRUCTION_ERROR;
   }
   if (CFSR & SCB_CFSR_INVSTATE_Msk) {
-    hardware_fault_flags |= INVALID_STATE_ERROR;
+    hard_fault_flags |= INVALID_STATE_ERROR;
   }
   if (CFSR & SCB_CFSR_INVPC_Msk) {
-    hardware_fault_flags |= INVALID_PC_LOAD;
+    hard_fault_flags |= INVALID_PC_LOAD;
   }
   if (CFSR & SCB_CFSR_NOCP_Msk) {
-    hardware_fault_flags |= NO_PROCESSOR;
+    hard_fault_flags |= NO_PROCESSOR;
   }
   if (CFSR & SCB_CFSR_UNALIGNED_Msk) {
-    hardware_fault_flags |= UNALIGNED_ACCESS;
+    hard_fault_flags |= UNALIGNED_ACCESS;
   }
   if (CFSR & SCB_CFSR_DIVBYZERO_Msk) {
-    hardware_fault_flags |= DIVISION_BY_ZERO;
+    hard_fault_flags |= DIVISION_BY_ZERO;
   }
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
@@ -313,6 +313,34 @@ void DMA2_Stream0_IRQHandler(void)
   /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
 
   /* USER CODE END DMA2_Stream0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USB On The Go HS End Point 1 Out global interrupt.
+  */
+void OTG_HS_EP1_OUT_IRQHandler(void)
+{
+  /* USER CODE BEGIN OTG_HS_EP1_OUT_IRQn 0 */
+
+  /* USER CODE END OTG_HS_EP1_OUT_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_OTG_HS);
+  /* USER CODE BEGIN OTG_HS_EP1_OUT_IRQn 1 */
+
+  /* USER CODE END OTG_HS_EP1_OUT_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USB On The Go HS End Point 1 In global interrupt.
+  */
+void OTG_HS_EP1_IN_IRQHandler(void)
+{
+  /* USER CODE BEGIN OTG_HS_EP1_IN_IRQn 0 */
+
+  /* USER CODE END OTG_HS_EP1_IN_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_OTG_HS);
+  /* USER CODE BEGIN OTG_HS_EP1_IN_IRQn 1 */
+
+  /* USER CODE END OTG_HS_EP1_IN_IRQn 1 */
 }
 
 /**
