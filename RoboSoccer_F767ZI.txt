@@ -1,6 +1,6 @@
 Configuration	RoboSoccer_F767ZI
 STM32CubeMX 	6.15.0
-Date	07/22/2025
+Date	08/06/2025
 MCU	STM32F767ZITx
 
 

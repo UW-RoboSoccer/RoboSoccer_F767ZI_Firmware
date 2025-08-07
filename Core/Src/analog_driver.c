@@ -66,10 +66,9 @@ void ADC1_Init(void)
 
 /**
  * @brief  Get ADC reading with moving average filter
- * @param  ADC_HandleTypeDef Pointer to ADC HAL struct
  * @param  ADC_AvgCtx_t Pointer to ADC Context struct
  * @param  filter_size Moving-average window
- * @param  timeout  ADC sampling timeout ms
+ * @param  timeout ADC sampling timeout ms
  * @retval Is adc sampling successful
  */
 adc_status_t ADC_ReadAverage(ADC_AvgCtx_t* ctx, uint8_t filter_size, TickType_t timeout)
@@ -168,7 +167,8 @@ uint8_t ADC_ReadTempSensor(uint16_t vdda_mv)
 {
   // If no readings have been made, read once
   if (!(adc1_avg_ctx.status_flags & ADC_OPERATIONAL)) {
-    ADC_ReadAverage(&adc1_avg_ctx, NO_FILTER, ADC_TIMEOUT);
+    if (ADC_ReadAverage(&adc1_avg_ctx, NO_FILTER, ADC_TIMEOUT) == ADC_ERROR)
+      return 0;
   }
 
   uint16_t vtemp_raw = adc1_filtered_buffer[TEMPSENSOR_CHANNEL_INDEX];

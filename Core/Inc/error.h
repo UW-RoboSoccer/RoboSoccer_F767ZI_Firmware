@@ -12,13 +12,13 @@
 
 
 /* Public defines  ----------------------------------------------------------*/
-#define   MAX_ERROR_NUM       255
+#define MAX_ERROR_NUM         255
 
 /*---------- sys_error_flags ----------*/
-#define SYS_ERROR_NONE            0x00U
-#define MCU_VDDA_LOW_ERROR        0x01U
-#define MCU_VDDA_HIGH_ERROR       0x02U
-#define MCU_TEMP_HIGH_ERROR       0x04U
+#define SYS_ERROR_NONE        0x00U
+#define MCU_VDDA_LOW_ERROR    0x01U
+#define MCU_VDDA_HIGH_ERROR   0x02U
+#define MCU_TEMP_HIGH_ERROR   0x04U
 /*-------------------------------------*/
 
 
