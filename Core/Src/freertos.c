@@ -35,6 +35,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 typedef StaticTask_t osStaticThreadDef_t;
+typedef StaticQueue_t osStaticMessageQDef_t;
+typedef StaticSemaphore_t osStaticSemaphoreDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -88,7 +90,7 @@ const osThreadAttr_t ImuTask_attributes = {
   .cb_size = sizeof(ImuTaskControlBlock),
   .stack_mem = &ImuTaskBuffer[0],
   .stack_size = sizeof(ImuTaskBuffer),
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for MotorTask */
 osThreadId_t MotorTaskHandle;
@@ -100,22 +102,34 @@ const osThreadAttr_t MotorTask_attributes = {
   .cb_size = sizeof(MotorTaskControlBlock),
   .stack_mem = &MotorTaskBuffer[0],
   .stack_size = sizeof(MotorTaskBuffer),
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityHigh1,
 };
 /* Definitions for motorRxQueue */
 osMessageQueueId_t motorRxQueueHandle;
+uint8_t motorRxQueueBuffer[ 32 * sizeof( uint8_t ) ];
+osStaticMessageQDef_t motorRxQueueControlBlock;
 const osMessageQueueAttr_t motorRxQueue_attributes = {
-  .name = "motorRxQueue"
+  .name = "motorRxQueue",
+  .cb_mem = &motorRxQueueControlBlock,
+  .cb_size = sizeof(motorRxQueueControlBlock),
+  .mq_mem = &motorRxQueueBuffer,
+  .mq_size = sizeof(motorRxQueueBuffer)
 };
 /* Definitions for adc1Sem */
 osSemaphoreId_t adc1SemHandle;
+osStaticSemaphoreDef_t adc1SemControlBlock;
 const osSemaphoreAttr_t adc1Sem_attributes = {
-  .name = "adc1Sem"
+  .name = "adc1Sem",
+  .cb_mem = &adc1SemControlBlock,
+  .cb_size = sizeof(adc1SemControlBlock),
 };
 /* Definitions for motorTxSem */
 osSemaphoreId_t motorTxSemHandle;
+osStaticSemaphoreDef_t motorTxSemControlBlock;
 const osSemaphoreAttr_t motorTxSem_attributes = {
-  .name = "motorTxSem"
+  .name = "motorTxSem",
+  .cb_mem = &motorTxSemControlBlock,
+  .cb_size = sizeof(motorTxSemControlBlock),
 };
 /* Definitions for ServoEvent */
 osEventFlagsId_t ServoEventHandle;
@@ -187,10 +201,10 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the semaphores(s) */
   /* creation of adc1Sem */
-  adc1SemHandle = osSemaphoreNew(1, 0, &adc1Sem_attributes);
+  adc1SemHandle = osSemaphoreNew(1, 1, &adc1Sem_attributes);
 
   /* creation of motorTxSem */
-  motorTxSemHandle = osSemaphoreNew(1, 0, &motorTxSem_attributes);
+  motorTxSemHandle = osSemaphoreNew(1, 1, &motorTxSem_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -204,7 +218,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the queue(s) */
   /* creation of motorRxQueue */
-  motorRxQueueHandle = osMessageQueueNew (64, sizeof(uint8_t), &motorRxQueue_attributes);
+  motorRxQueueHandle = osMessageQueueNew (32, sizeof(uint8_t), &motorRxQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -261,6 +275,11 @@ void StartAnalogTask(void *argument)
     // Read Vref
     VDDA_mv = ADC_ReadVdda();
     MCU_TEMP_c = ADC_ReadTempSensor(VDDA_mv);
+    if (adc1_filtered_buffer[0] > 1500) {
+      LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin;
+    } else {
+      LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin << 16;
+    }
     vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(2));
   }
   /* USER CODE END StartAnalogTask */
@@ -282,16 +301,11 @@ void StartGeneralTask0(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    if (adc1_filtered_buffer[0] > 1500) {
-      LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin;
-    } else {
-      LD2_GPIO_Port->BSRR = (uint32_t)LD2_Pin << 16;
-    }
-
-    //printf("imu_timestamp: %ld ", imu_spi.rx_timestamp);
-    //printf("adc1[0] Reading: %d \r\n", filtered_adc1_buffer[0]);
-    //printf("adc1[1] Reading: %d \r\n", filtered_adc1_buffer[1]);
-    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(100));
+//
+//    printf("imu_timestamp: %ld \r\n ", imu_spi.rx_timestamp);
+//    printf("adc1[0] Reading: %d \r\n",adc1_filtered_buffer[0]);
+//    printf("adc1[1] Reading: %d \r\n",adc1_filtered_buffer[1]);
+    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(1000));
   }
   /* USER CODE END StartGeneralTask0 */
 }
@@ -395,16 +409,16 @@ void StartMotorTask(void *argument)
       step = (step + 1) % 5;
     }
 
-    STServo_ReadPosition(&hservo, 2);
-    STServo_ReadPosition(&hservo, 4);
-    STServo_ReadPosition(&hservo, 8);
-    STServo_ReadPosition(&hservo, 15);
-    STServo_ReadPosition(&hservo, 17);
-//    if (STServo_SyncRead(&hservo) != SERVO_OK) {
-//      STServo_Error_t err = STServo_GetLastError(&hservo);
-//      printf("Servo %u error: %s\n\r", 0xFE, STServo_GetErrorString(err));
-//    }
-    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(10));
+//    STServo_ReadPosition(&hservo, 2);
+//    STServo_ReadPosition(&hservo, 4);
+//    STServo_ReadPosition(&hservo, 8);
+//    STServo_ReadPosition(&hservo, 15);
+//    STServo_ReadPosition(&hservo, 17);
+    if (STServo_SyncRead(&hservo) != SERVO_OK) {
+      STServo_Error_t err = STServo_GetLastError(&hservo);
+      printf("Servo %u error: %s\n\r", 0xFE, STServo_GetErrorString(err));
+    }
+    vTaskDelayUntil(&xWakeTime, pdMS_TO_TICKS(2));
   }
   /* USER CODE END StartMotorTask */
 }

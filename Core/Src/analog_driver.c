@@ -11,18 +11,18 @@
 #include "error.h"
 
 /* Private defines ---------------------------------------------------------*/
-// Get current adcx resolution bits (6, 8 , 10 , 12)
+// Get current adcx resolution bits (6, 8, 10, 12)
 #define ADC_GET_RESOLUTION_BITS(hadc_)                                                   \
     (uint8_t)(12U - ((( (hadc_)->Instance->CR1 & ADC_CR1_RES_Msk) >> ADC_CR1_RES_Pos) * 2U)); \
 
 // Calibrate one averaged ADC sample to 3.3V based on the current VDDA/VREF
 #define ADC_CALIBRATE_SAMPLE(raw, vdda_mv, resolution_bits)            \
-  ( (uint16_t)(                                                    \
-      ( ((uint16_t)(raw) << (12U - (resolution_bits)) )                     \
-    * ( (1U << (resolution_bits)) - 1U )                                  \
-    + ( ((uint32_t)(vdda_mv) * 4095U + 1650U) / 3300U >> 1 ))        \
-    / ( ((uint32_t)(vdda_mv) * 4095U + 1650U) / 3300U )            \
-  ))
+    ( (uint16_t)(                                                    \
+        ( ((uint16_t)(raw) << (12U - (resolution_bits)) )                     \
+      * ( (1U << (resolution_bits)) - 1U )                                  \
+      + ( ((uint32_t)(vdda_mv) * 4095U + 1650U) / 3300U >> 1 ))        \
+      / ( ((uint32_t)(vdda_mv) * 4095U + 1650U) / 3300U )            \
+    ))
 
 
 /* Private variables ----------------------------------------------------------*/
@@ -131,7 +131,7 @@ uint16_t ADC_ReadVdda(void) {
 
   uint16_t vref_raw = adc1_filtered_buffer[VDDA_CHANNEL_INDEX];
   // Flag if sensor is faulty
-  if (vref_raw == 0) {
+  if (vref_raw == 0U) {
     if (adc1_avg_ctx.status_flags & ADC_OPERATIONAL) {
       adc1_avg_ctx.error_flags |= ADC_VREF_SENSOR_ERROR;
     }
@@ -140,11 +140,11 @@ uint16_t ADC_ReadVdda(void) {
 
   // Convert raw sample to 12 bit resolution
   uint8_t adc1_resolution = ADC_GET_RESOLUTION_BITS(&hadc1);
-  vref_raw = vref_raw << (12U - adc1_resolution);
+  vref_raw <<= (12U - adc1_resolution);
 
   // Vref_cal / 3300mv = Vref_raw / Vdda
   const uint16_t vref_cal = *VREFINT_CAL_ADDR_CMSIS;
-  uint16_t vdda = (uint16_t)((uint32_t)(VDDA_3300 * vref_cal + (vref_raw >> 1)) / vref_raw);
+  uint16_t vdda = (uint16_t)((uint32_t)(VDDA_3300 * vref_cal + (vref_raw >> 1U)) / vref_raw);
   if (vdda <= VDDA_LOW_THRESHOLD) {
     sys_error_flags |= MCU_VDDA_LOW_ERROR;
     return vdda;
@@ -161,7 +161,7 @@ uint16_t ADC_ReadVdda(void) {
 /**
  * @brief  Get MCU temperature sensor reading
  * @param  vdda_mv Current VDDA in millivolt
- * @retval MCU temperature in 1 celsius
+ * @retval MCU temperature in unit 1 celsius
  */
 uint8_t ADC_ReadTempSensor(uint16_t vdda_mv)
 {
@@ -173,7 +173,7 @@ uint8_t ADC_ReadTempSensor(uint16_t vdda_mv)
 
   uint16_t vtemp_raw = adc1_filtered_buffer[TEMPSENSOR_CHANNEL_INDEX];
   // Flag if sensor is faulty
-  if (vtemp_raw == 0) {
+  if (vtemp_raw == 0U) {
     if (adc1_avg_ctx.status_flags & ADC_OPERATIONAL) {
       adc1_avg_ctx.error_flags |= ADC_TEMP_SENSOR_ERROR;
     }
@@ -190,8 +190,12 @@ uint8_t ADC_ReadTempSensor(uint16_t vdda_mv)
   // Linear interpolation T(C) = (((raw – V30) × (110-30) + round)/(V110 – V30)) + 30
   uint8_t temp_c = (uint8_t)( (((vtemp_raw - temp30_cal) * (110U - 30U) + (delta_cal >> 1U)) / delta_cal) + 30U );
 
+  static uint8_t error_count = 0U;
   if (temp_c >= MCU_TEMP_HIGH_THRESHOLD) {
-    sys_error_flags |= MCU_TEMP_HIGH_ERROR;
+    error_count += 1U;
+    if (error_count > 5U) {
+      sys_error_flags |= MCU_TEMP_HIGH_ERROR;
+    }
   }
   return temp_c;
 }

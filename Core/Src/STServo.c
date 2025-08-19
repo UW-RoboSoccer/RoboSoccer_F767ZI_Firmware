@@ -36,6 +36,8 @@
     }                                                          \
   } while (0)
 
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+
 // Baud rate definitions
 #define SMS_STS_1M                  0U
 #define SMS_STS_0_5M                1U
@@ -127,6 +129,7 @@ static uint8_t STServo_CalculateChecksum(const uint8_t *packet, uint8_t length);
 static bool STServo_ValidateChecksum(const uint8_t *packet, uint8_t length);
 static uint8_t STServo_BuildPacket(STServo_Packet_t *packet, uint8_t id, uint8_t instruction,
                                    const uint8_t *parameters, uint8_t param_length);
+static void STServo_ProcessRxData(STServo_Handle_t *handle, const uint8_t *data, uint16_t len);
 
 
 /* Function definitions -------------------------------------------------------*/
@@ -155,13 +158,15 @@ bool STServo_Init(STServo_Handle_t *handle, UART_HandleTypeDef *huart)
   handle->timeout_ms = SERVO_RX_TIMEOUT;
   memset(&handle->rxCtx, 0, sizeof(handle->rxCtx));
 
-
-
-  // Enable uart receive ISR
-  if (HAL_UART_Receive_IT(handle->huart, &handle->rxCtx.byte, 1) != HAL_OK) {
+  // Enable uart circular receive dma
+  if (HAL_UART_Receive_DMA(handle->huart, handle->rxCtx.dma_buf, RX_RING_BUFFER_SIZE) != HAL_OK) {
     last_error = STSERVO_ERROR_COMM_FAILED;
     return false;
   }
+  // Clear idel line flag and enable idel line interrupt
+  handle->huart->Instance->ICR = UART_CLEAR_IDLEF;
+  handle->huart->Instance->CR1 |= USART_CR1_IDLEIE_Msk;
+
   last_error = STSERVO_OK;
   handle->initialized = true;
   return true;
@@ -397,72 +402,181 @@ static uint8_t STServo_BuildPacket(STServo_Packet_t *packet, uint8_t id, uint8_t
 
 
 /**
- * @brief Handle read data from ISR
+ * @brief Handle UART idel line, DMA rx half complete and DMA rx complete ISR
+ *        Split the frame if the frame wrapped around in the circular buffer.
  * @param handle Servo handle
+ * @note  Called from USARTx_IRQHandler when UART rx idel line is detected
  */
 void STServo_ReadFromISR(STServo_Handle_t *handle)
 {
-  STServo_RxCtx_t *rx = &handle->rxCtx;
-
-  // Build 4-byte message info
-  if (rx->info_index < 4) {
-    // Store info byte
-    rx->info[rx->info_index] = rx->byte;
-    rx->info_index += 1;
-
-    switch (rx->info_index) {
-      case 1:
-        // Start read second header byte
-        HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
-        break;
-
-      case 2:
-        if (rx->info[0] != 0xFF || rx->info[1] != 0xFF) {
-          rx->info[0] = rx->info[1];
-          rx->info_index = 1;
-        }
-        // Start read ID byte
-        HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
-        break;
-
-      case 3:
-        // Start read Length
-        HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
-        break;
-
-      case 4:
-        // Length received
-        rx->data_len = rx->info[3];
-        if (rx->data_len == 0 || rx->data_len > ST_SERVO_MAX_BUFFER_SIZE - 4) {
-          // bad length, restart
-          rx->info_index = 0;
-          HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
-        } else {
-          // Start read data
-          HAL_UART_Receive_IT(handle->huart, rx->tmp_frame, rx->data_len);
-        }
-        return;
-    }
+  if (__HAL_UART_GET_FLAG(handle->huart, UART_FLAG_IDLE) == RESET) {
     return;
   }
+  // Clear idel line flag
+  handle->huart->Instance->ICR = UART_CLEAR_IDLEF;
 
-  // Data arrived
-  // Push info to the ring buffer
-  for (uint8_t i = 0; i < 4; ++i) {
-    RING_PUSH(rx, rx->info[i]);
-  }
-  // Push data to the ring buffer
-  for (uint8_t i = 0; i < rx->data_len; i++) {
-    RING_PUSH(rx, rx->tmp_frame[i]);
-  }
-  // Notify a message is received and buffer this frame length
-  uint8_t frame_len = rx->data_len + 4;
-  osMessageQueuePut(handle->rxQueue, &frame_len, 0, 0);
+  STServo_RxCtx_t *rx = &handle->rxCtx;
 
-  // Start check for next message
-  rx->info_index = 0;
-  HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
+  // Calculate how many bytes the DMA controller produced in the circular buffer
+  // Get byte count from NDTR number of data register
+  uint16_t current = RX_RING_BUFFER_SIZE - (handle->huart->hdmarx->Instance->NDTR);
+  uint16_t produced = (current >= rx->dma_last) ? (current - rx->dma_last)
+                                                : (RX_RING_BUFFER_SIZE - rx->dma_last + current);
+
+  if (produced == 0) return;
+
+  // Process possibly wrapped region in two slices to avoid out of bound access
+  uint16_t first = (uint16_t)MIN(produced, (uint16_t)(RX_RING_BUFFER_SIZE - rx->dma_last));
+  SCB_InvalidateDCache_by_Addr((uint32_t*)&rx->dma_buf[rx->dma_last], first);
+  STServo_ProcessRxData(handle, &rx->dma_buf[rx->dma_last], first);
+  if (produced > first) {
+    SCB_InvalidateDCache_by_Addr((uint32_t*)&rx->dma_buf[0], produced - first);
+    STServo_ProcessRxData(handle, &rx->dma_buf[0], produced - first);
+  }
+
+  rx->dma_last = current;
 }
+
+
+/**
+ * @brief Process DMA buffer into ring buffer and notify one frame is ready
+ * @param handle Servo handle
+ * @param data Pointer to raw DMA buffer start addr
+ * @param len Length of DMA buffer
+ */
+static void STServo_ProcessRxData(STServo_Handle_t *handle, const uint8_t *data, uint16_t len)
+{
+  STServo_RxCtx_t *rx = &handle->rxCtx;
+
+  for (uint16_t i = 0; i < len; ++i) {
+    // Build 4-byte header: FF FF ID LEN
+    if (rx->info_index < 4) {
+      rx->info[rx->info_index++] = data[i];
+
+      switch (rx->info_index) {
+        case 1:
+          break; // wait for 2nd header byte
+
+        case 2:
+          if (rx->info[0] != 0xFF || rx->info[1] != 0xFF) {
+            rx->info[0] = rx->info[1];
+            rx->info_index = 1;
+          }
+          break;
+
+        case 3:
+          break; // got ID, wait LEN
+
+        case 4:
+          rx->data_len = rx->info[3];
+          rx->data_index = 0;
+          if (rx->data_len == 0 || rx->data_len > ST_SERVO_MAX_BUFFER_SIZE - 4) {
+            // bad LEN -> restart header
+            rx->info_index = 0;
+          }
+          break;
+      }
+      // Skip the following while building header
+      continue;
+    }
+
+    // Collect payload bytes
+    if (rx->data_index < rx->data_len) {
+      if (rx->data_index < sizeof(rx->tmp_frame)) {
+        rx->tmp_frame[rx->data_index] = data[i];
+      }
+      rx->data_index++;
+
+      // If full payload collected, publish a frame (info[4]+payload)
+      if (rx->data_index == rx->data_len) {
+        // Push info to the ring buffer
+        for (uint8_t i = 0; i < 4; i++) {
+          RING_PUSH(rx, rx->info[i]);
+        }
+        // Push data to the ring buffer
+        for (uint8_t i = 0; i < rx->data_len; i++) {
+          RING_PUSH(rx, rx->tmp_frame[i]);
+        }
+
+        uint8_t frame_len = (uint8_t)(rx->data_len + 4U);
+        (void)osMessageQueuePut(handle->rxQueue, &frame_len, 0, 0);
+
+        // Restart for next frame
+        rx->info_index = 0;
+        rx->data_index = 0;
+      }
+    }
+  }
+
+}
+
+///**
+// * @brief Handle read data from ISR
+// * @param handle Servo handle
+// */
+//void STServo_ReadFromISR(STServo_Handle_t *handle)
+//{
+//  STServo_RxCtx_t *rx = &handle->rxCtx;
+//
+//  // Build 4-byte message info
+//  if (rx->info_index < 4) {
+//    // Store info byte
+//    rx->info[rx->info_index] = rx->byte;
+//    rx->info_index += 1;
+//
+//    switch (rx->info_index) {
+//      case 1:
+//        // Start read second header byte
+//        HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
+//        break;
+//
+//      case 2:
+//        if (rx->info[0] != 0xFF || rx->info[1] != 0xFF) {
+//          rx->info[0] = rx->info[1];
+//          rx->info_index = 1;
+//        }
+//        // Start read ID byte
+//        HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
+//        break;
+//
+//      case 3:
+//        // Start read Length
+//        HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
+//        break;
+//
+//      case 4:
+//        // Length received
+//        rx->data_len = rx->info[3];
+//        if (rx->data_len == 0 || rx->data_len > ST_SERVO_MAX_BUFFER_SIZE - 4) {
+//          // bad length, restart
+//          rx->info_index = 0;
+//          HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
+//        } else {
+//          // Start read data
+//          HAL_UART_Receive_IT(handle->huart, rx->tmp_frame, rx->data_len);
+//        }
+//        return;
+//    }
+//    return;
+//  }
+//
+//  // Data arrived
+//  // Push info to the ring buffer
+//  for (uint8_t i = 0; i < 4; ++i) {
+//    RING_PUSH(rx, rx->info[i]);
+//  }
+//  // Push data to the ring buffer
+//  for (uint8_t i = 0; i < rx->data_len; i++) {
+//    RING_PUSH(rx, rx->tmp_frame[i]);
+//  }
+//  // Notify a message is received and buffer this frame length
+//  uint8_t frame_len = rx->data_len + 4;
+//  osMessageQueuePut(handle->rxQueue, &frame_len, 0, 0);
+//
+//  // Start check for next message
+//  rx->info_index = 0;
+//  HAL_UART_Receive_IT(handle->huart, &rx->byte, 1);
+//}
 
 
 
@@ -762,6 +876,7 @@ STServo_Status_t STServo_SyncRead(STServo_Handle_t *handle)
   uint8_t index = 0;
 
   // Write parameters
+  // Request data from addr SMS_STS_PRESENT_POSITION_L to SMS_STS_PRESENT_POSITION_H
   params[index++] = SMS_STS_PRESENT_POSITION_H - SMS_STS_PRESENT_POSITION_L + 1;  // Data length
   for (uint8_t id = 0; id < MAX_SERVO_ID; id++) {
     // Skip if current servo is not online
@@ -776,7 +891,7 @@ STServo_Status_t STServo_SyncRead(STServo_Handle_t *handle)
   }
 
   /* Handle data feedback
-   * Format: 0xFF, 0xFF, LEN, WorkCondi, Position_L, Position_H, Speed_L, Speed_H, Load_L, Load_H,
+   * Format: 0xFF, 0xFF, ID, LEN, WorkCondi, Position_L, Position_H, Speed_L, Speed_H, Load_L, Load_H,
              Voltage, Temperature, DNC, DNC, movement flag, DNC, DNC, Current_L, Current_H, Checksum
   */
   for (uint8_t id = 0; id < MAX_SERVO_ID; id++) {
@@ -793,7 +908,7 @@ STServo_Status_t STServo_SyncRead(STServo_Handle_t *handle)
 
     // Check id
     if (response[2] != id) {
-      servo_data[id].sw_error_flags |= SERVO_SYNC_RX_FAILURE;
+      servo_data[id].sw_error_flags |= SERVO_SYNC_RX_ID_ERROR;
       return SERVO_ERROR;
     }
 

@@ -20,14 +20,14 @@
 #define VDDA_CHANNEL_INDEX        3U
 
 // MCU operating conditions
-#define VDDA_HIGH_THRESHOLD       3600    // millivolt
-#define VDDA_LOW_THRESHOLD        2400    // millivolt
-#define MCU_TEMP_HIGH_THRESHOLD   120     // C
+#define VDDA_HIGH_THRESHOLD       3600U    // millivolt
+#define VDDA_LOW_THRESHOLD        2400U    // millivolt
+#define MCU_TEMP_HIGH_THRESHOLD   120U     // C
 
 // Application constants
 #define ADC1_FILTER_SIZE          6U
 #define VDDA_3300                 3300U   // millivolt
-#define NO_FILTER                 1
+#define NO_FILTER                 1U
 #define ADC_TIMEOUT               2U      // millisecond
 
 /*------------ error_flags ------------*/
@@ -48,8 +48,8 @@
 
 /* Public typedef  ----------------------------------------------------------*/
 typedef enum {
-  ADC_OK    = 0 ,
-  ADC_ERROR = 1
+  ADC_OK    = 0U,
+  ADC_ERROR = 1U
 } adc_status_t;
 
 // ADC average context structure

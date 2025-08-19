@@ -130,8 +130,8 @@ int main(void)
   printf("Start osKernel Init \n\r");
 
   // IWDG disabled for debugging
-//  MX_IWDG_Init();
-//  MX_USB_DEVICE_Init();
+  //  MX_IWDG_Init();
+  //  MX_USB_DEVICE_Init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

@@ -1,11 +1,10 @@
 /**
  * @file STServo.h
  * @brief ST Series Serial Servo Control for STM32F707ZI
- * @author Adapted for STM32F707ZI
  * @date 2025
  * 
  * This provides control for STS3215 and other ST series servos
- * using UART IT communication on STM32F707ZI with HAL drivers.
+ * using UART_IT tx and UART_DMA rx com on STM32F767ZI with HAL drivers.
  */
 
 #ifndef _ST_SERVO_H
@@ -24,7 +23,7 @@ extern "C" {
 // Application constants
 #define MAX_SERVO_ID                21U            // Max 30 for sync write command
 #define RX_RING_BUFFER_SIZE         512U           // Must be a power of 2
-#define SERVO_RX_TIMEOUT            2U             // millisecond
+#define SERVO_RX_TIMEOUT            10U            // millisecond
 #define ST_SERVO_MAX_BUFFER_SIZE    0xFFU
 
 /*--------------- hw_error_flags ---------------*/
@@ -48,6 +47,7 @@ extern "C" {
 #define SERVO_RD_TX_FAILURE         0x10U
 #define SERVO_RD_RX_FAILURE         0x20U
 #define SERVO_SYNC_RX_FAILURE       0x40U
+#define SERVO_SYNC_RX_ID_ERROR      0x80U
 /*----------------------------------------------*/
 
 /*--------------- status_flags -----------------*/
@@ -59,11 +59,11 @@ extern "C" {
 /* Public typedef  ----------------------------------------------------------*/
 // Packet structure
 typedef struct {
-  uint8_t header[2];      // 0xFF, 0xFF
-  uint8_t id;             // Servo ID
-  uint8_t length;         // Length of parameters + 2
-  uint8_t instruction;    // Instruction code
-  uint8_t parameters[ST_SERVO_MAX_BUFFER_SIZE - 5];  // Parameters
+  uint8_t header[2];                                 // 0xFF, 0xFF
+  uint8_t id;                                        // Servo ID
+  uint8_t length;                                    // Length of parameters + 2
+  uint8_t instruction;                               // Instruction code
+  uint8_t parameters[ST_SERVO_MAX_BUFFER_SIZE - 5U]; // Parameters
   // Checksum appeneded to the end of parameters
 } __attribute__((packed)) STServo_Packet_t;
 
@@ -73,10 +73,15 @@ typedef struct {
   uint8_t            info[4];                       // FF FF ID LEN
   volatile uint8_t   info_index;
   volatile uint8_t   data_len;                      // LEN after 4 byte info complete
+  volatile uint8_t   data_index;                    // Index of payload bytes
   uint8_t            buffer[RX_RING_BUFFER_SIZE];   // Ring buffer to store msg
   volatile uint16_t  head;
   volatile uint16_t  tail;
   uint8_t            tmp_frame[32];
+
+  __attribute__((aligned(32)))
+  uint8_t            dma_buf[RX_RING_BUFFER_SIZE];  // Raw circular DMA buffer
+  volatile uint16_t  dma_last;                      // Last read index in dma_buf
 } STServo_RxCtx_t;
 
 // Servo data handle structure
