@@ -1,7 +1,7 @@
 # RoboSoccer F767ZI Firmware
 
-Firmware for the University of Waterloo RoboSoccer humanoid robot, built on the **STM32F767ZI Nucleo** platform.  
-This firmware provides real-time control of sensors and actuators, and serves as the embedded foundation for the RoboCup 2026 competition.
+Firmware for the University of Waterloo RoboSoccer humanoid robot. 
+This firmware provides real-time control of sensors and actuators, and serves as the embedded foundation for the RoboCup competition.
 
 ---
 
@@ -20,6 +20,20 @@ This firmware provides real-time control of sensors and actuators, and serves as
 
 ---
 
+## Project Structure
+
+```text
+RoboSoccer_F767ZI_Firmware/
+├── Core/
+│   ├── Src/         # Application code
+│   └── Inc/         # Headers for tasks, drivers, utilities
+├── Drivers/         # STM32 HAL and custom peripheral drivers
+├── FreeRTOS/        # RTOS configuration and CMSIS wrappers
+├── Middlewares/     # (USB, SH2 library for BNO085, etc)
+└── README.md
+```
+---
+
 ## Hardware
 
 - STM32F767ZI Nucleo board  
@@ -28,20 +42,6 @@ This firmware provides real-time control of sensors and actuators, and serves as
 - FSR03CE force sensors (ADC inputs)  
 - USB3300 ULPI PHY (USB HS)  
 - Custom PCBs for interfacing sensors and actuators  
-
----
-
-## Project Structure
-
-RoboSoccer_F767ZI_Firmware/
-├── Core/
-│ ├── Src/ # Application code
-│ ├── Inc/ # Headers for tasks, drivers, utilities
-├── Drivers/ # STM32 HAL and custom peripheral drivers
-├── FreeRTOS/ # RTOS configuration and CMSIS wrappers
-├── Middlewares/ # (e.g., SH2 library for BNO085)
-└── README.md
-
 
 ---
 
