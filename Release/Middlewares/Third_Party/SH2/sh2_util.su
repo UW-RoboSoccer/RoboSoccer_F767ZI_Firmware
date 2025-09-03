@@ -1,0 +1,12 @@
+../Middlewares/Third_Party/SH2/sh2_util.c:24:9:readu8	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:30:6:writeu8	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:35:10:readu16	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:41:6:writeu16	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:48:10:readu32	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:54:6:writeu32	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:65:8:read8	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:71:6:write8	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:76:9:read16	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:82:6:write16	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:89:9:read32	0	static
+../Middlewares/Third_Party/SH2/sh2_util.c:95:6:write32	0	static

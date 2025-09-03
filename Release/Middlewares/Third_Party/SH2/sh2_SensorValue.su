@@ -1,0 +1,5 @@
+../Middlewares/Third_Party/SH2/sh2_SensorValue.c:248:12:decodeAccelerometer	24	static
+../Middlewares/Third_Party/SH2/sh2_SensorValue.c:340:12:decodeRotationVector	24	static
+../Middlewares/Third_Party/SH2/sh2_SensorValue.c:351:12:decodeGameRotationVector	24	static
+../Middlewares/Third_Party/SH2/sh2_SensorValue.c:238:12:decodeRawAccelerometer	16	static
+../Middlewares/Third_Party/SH2/sh2_SensorValue.c:80:5:sh2_decodeSensorEvent	24	static

@@ -10,13 +10,13 @@
 
 /* Public defines  ----------------------------------------------------------*/
 // SHTP protocol constants
-#define SHTP_HEADER_SIZE                4U
-#define SHTP_PKT_LEN_MSK                0x7FFFU
+#define SHTP_HEADER_SIZE               4U
+#define SHTP_PKT_LEN_MSK               0x7FFFU
 
 // BNO085 report rate definitions
-#define BNO08X_REPORT_1000HZ            1000U       // microsecond
-#define BNO08X_REPORT_500HZ             2000U       // microsecond
-#define BNO08X_REPORT_400HZ             2500U       // microsecond
+#define BNO08X_REPORT_1000HZ           1000U       // microsecond
+#define BNO08X_REPORT_500HZ            2000U       // microsecond
+#define BNO08X_REPORT_400HZ            2500U       // microsecond
 
 // BNO085 SPI constants
 #define SPI_READ_SHTP_HEADER_TIMEOUT   10U         // millisecond

@@ -1,0 +1,10 @@
+../Drivers/CMSIS/Include/core_cm7.h:2229:22:SCB_EnableICache	4	static,ignoring_inline_asm
+../Drivers/CMSIS/Include/core_cm7.h:2265:22:SCB_InvalidateICache	4	static,ignoring_inline_asm
+../Drivers/CMSIS/Include/core_cm7.h:2281:22:SCB_EnableDCache	24	static,ignoring_inline_asm
+../Drivers/CMSIS/Include/core_cm7.h:2357:22:SCB_InvalidateDCache	24	static,ignoring_inline_asm
+../Core/Src/main.c:86:5:main	16	static
+../Core/Src/main.c:161:6:SystemClock_Config	88	static
+../Core/Src/main.c:220:15:reset_cause_get	16	static
+../Core/Src/main.c:264:13:reset_cause_get_name	24	static
+../Core/Src/main.c:307:6:HAL_TIM_PeriodElapsedCallback	16	static
+../Core/Src/main.c:325:6:Error_Handler	8	static

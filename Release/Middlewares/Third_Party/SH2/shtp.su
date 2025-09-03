@@ -1,0 +1,6 @@
+../Middlewares/Third_Party/SH2/shtp.c:300:7:shtp_open	16	static
+../Middlewares/Third_Party/SH2/shtp.c:337:6:shtp_close	8	static
+../Middlewares/Third_Party/SH2/shtp.c:349:6:shtp_setEventCallback	0	static
+../Middlewares/Third_Party/SH2/shtp.c:359:5:shtp_listenChan	8	static
+../Middlewares/Third_Party/SH2/shtp.c:396:6:shtp_service	40	static
+../Middlewares/Third_Party/SH2/shtp.c:377:5:shtp_send	40	static

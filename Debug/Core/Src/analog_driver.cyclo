@@ -1,0 +1,6 @@
+../Drivers/CMSIS/Include/core_cm7.h:2464:22:SCB_InvalidateDCache_by_Addr	2
+../Drivers/CMSIS/Include/core_cm7.h:2491:22:SCB_CleanDCache_by_Addr	2
+../Core/Src/analog_driver.c:46:6:ADC1_Init	2
+../Core/Src/analog_driver.c:74:14:ADC_ReadAverage	8
+../Core/Src/analog_driver.c:125:10:ADC_ReadVdda	7
+../Core/Src/analog_driver.c:166:9:ADC_ReadTempSensor	7

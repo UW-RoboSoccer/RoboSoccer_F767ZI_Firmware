@@ -1,0 +1,4 @@
+../Middlewares/Third_Party/SH2/euler.c:29:7:q_to_yaw	8	static
+../Middlewares/Third_Party/SH2/euler.c:40:7:q_to_pitch	8	static
+../Middlewares/Third_Party/SH2/euler.c:51:7:q_to_roll	8	static
+../Middlewares/Third_Party/SH2/euler.c:61:6:q_to_ypr	48	static
