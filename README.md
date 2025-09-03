@@ -11,7 +11,7 @@ This firmware provides real-time control of sensors and actuators, and serves as
   - `ImuTask` – 2.5 ms loop for BNO085 IMU fusion data.
   - `MotorTask` – synchronized servo control/feedback for 20+ motors.
   - `AnalogTask` – ADC sampling of FSR sensors with averaging.
-  - `GeneralTask0` – system-level events and housekeeping.
+  - `GeneralTask0` – system-level events.
 - **BNO085 IMU driver** (SPI-DMA with CEVA-style state machine).
 - **Servo communication stack** for STS3215 servos over UART (DMA or interrupt driven).
 - **Force sensor array** using FSR03CE sensors and STM32 ADC averaging macros.
