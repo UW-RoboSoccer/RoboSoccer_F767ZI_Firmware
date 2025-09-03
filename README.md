@@ -1,4 +1,4 @@
-# RoboSoccer F767ZI Firmware
+# RoboSoccer STM32F767ZI Firmware
 
 Firmware for the University of Waterloo RoboSoccer humanoid robot. 
 This firmware provides real-time control of sensors and actuators, and serves as the embedded foundation for the RoboCup competition.
