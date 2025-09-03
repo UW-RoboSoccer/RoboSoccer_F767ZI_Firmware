@@ -45,15 +45,6 @@ RoboSoccer_F767ZI_Firmware/
 
 ---
 
-## Build & Flash
-
-1. **Toolchain**: [STM32CubeIDE](https://www.st.com/en/development-tools/stm32cubeide.html) (recommended), or `arm-none-eabi-gcc` + Make.  
-2. Open the project in CubeIDE, configure the target as `STM32F767ZI`.  
-3. Connect the Nucleo board via ST-Link.  
-4. Build (`Ctrl+B`) and flash (`Run` or `Debug`).  
-
----
-
 ## Contributing
 
 1. Fork the repository.  
